@@ -1,0 +1,128 @@
+/* ============================================
+   TABLET (<=1024px)
+   ============================================ */
+@media (max-width: 1024px) {
+    .nav-drawer {
+        transform: translateX(-100%);
+    }
+
+    .nav-overlay {
+        display: block;
+    }
+
+    body.nav-open .nav-drawer {
+        transform: translateX(0);
+    }
+
+    body.nav-open .nav-overlay {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .header {
+        left: 0;
+    }
+
+    .header-hamburger {
+        display: flex;
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+}
+
+/* ============================================
+   MOBILE (<=768px)
+   ============================================ */
+@media (max-width: 768px) {
+    .main-content {
+        padding: var(--space-md);
+    }
+
+    /* Switch table to cards */
+    .table-container {
+        display: none;
+    }
+
+    .customer-cards {
+        display: grid;
+    }
+
+    /* Stack form rows */
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    /* Full width buttons */
+    .btn-block-mobile {
+        width: 100%;
+    }
+
+    /* Page header */
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    /* Search bar */
+    .search-bar {
+        flex-direction: column;
+    }
+
+    .search-bar .btn {
+        width: 100%;
+    }
+
+    /* Modal */
+    .modal {
+        width: 95%;
+        padding: var(--space-lg);
+    }
+
+    /* Auth card */
+    .auth-card {
+        padding: var(--space-lg);
+    }
+
+    /* FAB */
+    .fab {
+        bottom: var(--space-lg);
+        right: var(--space-lg);
+    }
+}
+
+/* ============================================
+   SMALL MOBILE (<=480px)
+   ============================================ */
+@media (max-width: 480px) {
+    .auth-card {
+        padding: var(--space-md);
+        border-radius: var(--radius-md);
+    }
+
+    .auth-logo-icon {
+        width: 52px;
+        height: 52px;
+    }
+
+    .auth-logo-title {
+        font-size: var(--font-size-xl);
+    }
+
+    .page-title {
+        font-size: var(--font-size-xl);
+    }
+
+    .customer-card-details {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+    }
+
+    .modal-actions .btn {
+        width: 100%;
+    }
+}

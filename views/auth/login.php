@@ -1,0 +1,60 @@
+<?php $pageTitle = 'Login'; ?>
+
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="auth-logo-icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>
+                </svg>
+            </div>
+            <h1 class="auth-logo-title"><?= e(APP_NAME) ?></h1>
+            <p class="auth-logo-subtitle">Food Delivery Management</p>
+        </div>
+
+        <h2 class="auth-title">Sign In</h2>
+
+        <?php require BASE_PATH . '/views/partials/flash.php'; ?>
+
+        <form id="loginForm" action="<?= baseUrl('login') ?>" method="POST" novalidate>
+            <?= csrfField() ?>
+
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    class="form-input"
+                    placeholder="Enter your username"
+                    value="<?= e(old('username')) ?>"
+                    autocomplete="username"
+                    required
+                >
+                <span class="form-error" id="username-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="form-input"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                >
+                <span class="form-error" id="password-error"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block btn-lg">
+                Sign In
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Need an account? <a href="<?= baseUrl('register') ?>">Contact your administrator</a></p>
+        </div>
+    </div>
+</div>

@@ -4,12 +4,13 @@
 -- IMPORTANT: Change the password after first login.
 -- ============================================
 
-INSERT INTO users (username, email, password_hash, role, is_active)
+INSERT INTO users (username, email, password_hash, role, is_active, status)
 VALUES (
     'admin',
     'admin@cletaeats.com',
     '$2y$12$TSMWOutJyI4FQaY1qwOMDOMAJClWw0aDjamok5.MfjkEWpi/ulu5S',
     'admin',
-    1
+    1,
+    'active'
 )
 ON DUPLICATE KEY UPDATE username = username;

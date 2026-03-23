@@ -1,4 +1,4 @@
-<?php $pageTitle = 'Login'; ?>
+<?php $pageTitle = 'Create Account'; ?>
 
 <div class="auth-wrapper">
     <div class="auth-card">
@@ -12,11 +12,11 @@
             <p class="auth-logo-subtitle">Food Delivery Management</p>
         </div>
 
-        <h2 class="auth-title">Sign In</h2>
+        <h2 class="auth-title">Create Account</h2>
 
         <?php require BASE_PATH . '/views/partials/flash.php'; ?>
 
-        <form id="loginForm" action="<?= baseUrl('login') ?>" method="POST" novalidate>
+        <form id="createAccountForm" action="<?= baseUrl('create-account') ?>" method="POST" novalidate>
             <?= csrfField() ?>
 
             <div class="form-group">
@@ -26,12 +26,27 @@
                     id="username"
                     name="username"
                     class="form-input"
-                    placeholder="Enter your username"
+                    placeholder="Choose a username"
                     value="<?= e(old('username')) ?>"
                     autocomplete="username"
                     required
                 >
                 <span class="form-error" id="username-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="form-label">Email</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="form-input"
+                    placeholder="Enter your email address"
+                    value="<?= e(old('email')) ?>"
+                    autocomplete="email"
+                    required
+                >
+                <span class="form-error" id="email-error"></span>
             </div>
 
             <div class="form-group">
@@ -41,20 +56,34 @@
                     id="password"
                     name="password"
                     class="form-input"
-                    placeholder="Enter your password"
-                    autocomplete="current-password"
+                    placeholder="Minimum 8 characters"
+                    autocomplete="new-password"
                     required
                 >
                 <span class="form-error" id="password-error"></span>
             </div>
 
+            <div class="form-group">
+                <label for="password_confirm" class="form-label">Confirm Password</label>
+                <input
+                    type="password"
+                    id="password_confirm"
+                    name="password_confirm"
+                    class="form-input"
+                    placeholder="Repeat your password"
+                    autocomplete="new-password"
+                    required
+                >
+                <span class="form-error" id="password_confirm-error"></span>
+            </div>
+
             <button type="submit" class="btn btn-primary btn-block btn-lg">
-                Sign In
+                Create Account
             </button>
         </form>
 
         <div class="auth-footer">
-            <p>Need an account? <a href="<?= baseUrl('create-account') ?>">Create an account</a></p>
+            <p>Already have an account? <a href="<?= baseUrl('login') ?>">Sign in</a></p>
         </div>
     </div>
 </div>

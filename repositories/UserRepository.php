@@ -39,15 +39,29 @@ class UserRepository
     public function create(array $data): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO users (username, email, password_hash, role, is_active)
-             VALUES (?, ?, ?, ?, 1)'
+            'INSERT INTO users (username, email, password_hash, role, is_active, status)
+             VALUES (?, ?, ?, ?, 1, ?)'
         );
         $stmt->execute([
             $data['username'],
             $data['email'],
             $data['password_hash'],
             $data['role'] ?? 'user',
+            $data['status'] ?? 'active',
         ]);
         return (int) $this->db->lastInsertId();
+    }
+
+    public function findByStatus(string $status): array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM users WHERE status = ? ORDER BY created_at DESC');
+        $stmt->execute([$status]);
+        return $stmt->fetchAll();
+    }
+
+    public function updateStatus(int $id, string $status): bool
+    {
+        $stmt = $this->db->prepare('UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?');
+        return $stmt->execute([$status, $id]);
     }
 }

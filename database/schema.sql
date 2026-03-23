@@ -15,6 +15,7 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     role          ENUM('admin', 'user') NOT NULL DEFAULT 'user',
     is_active     TINYINT(1) NOT NULL DEFAULT 1,
+    status        ENUM('pending', 'active') NOT NULL DEFAULT 'active',
     created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    DATETIME DEFAULT NULL,
     INDEX idx_users_username (username),

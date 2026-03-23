@@ -126,10 +126,12 @@
     </div>
 <?php endif; ?>
 
+<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
 <!-- FAB -->
 <a href="<?= baseUrl('customers/create') ?>" class="fab" title="Add Customer">
     <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
 </a>
+<?php endif; ?>
 
 <!-- Delete Confirmation Modal -->
 <?php require BASE_PATH . '/views/partials/delete-modal.php'; ?>

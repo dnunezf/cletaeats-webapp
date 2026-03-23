@@ -30,6 +30,10 @@ class AuthService
             return 'This account has been deactivated.';
         }
 
+        if ($user->isPending()) {
+            return 'Your account is pending approval by an administrator.';
+        }
+
         if (!password_verify($password, $user->passwordHash)) {
             return 'Invalid credentials.';
         }
@@ -76,6 +80,49 @@ class AuthService
             'email'         => trim($data['email']),
             'password_hash' => $passwordHash,
             'role'          => $data['role'] ?? 'user',
+        ]);
+    }
+
+    /**
+     * Public account creation. Returns user ID on success, or error array on failure.
+     */
+    public function createAccount(array $data): int|array
+    {
+        $validator = new Validator();
+        $validator
+            ->required($data['username'], 'username')
+            ->alphanumeric($data['username'], 'username')
+            ->minLength($data['username'], 3, 'username')
+            ->maxLength($data['username'], 50, 'username')
+            ->required($data['email'], 'email')
+            ->email($data['email'], 'email')
+            ->maxLength($data['email'], 100, 'email')
+            ->required($data['password'], 'password')
+            ->minLength($data['password'], 8, 'password')
+            ->maxLength($data['password'], 72, 'password')
+            ->required($data['password_confirm'], 'password')
+            ->matches($data['password'], $data['password_confirm'], 'password');
+
+        if (!$validator->isValid()) {
+            return $validator->getFirstErrors();
+        }
+
+        if ($this->userRepo->findByUsername($data['username'])) {
+            return ['username' => 'This username is already taken.'];
+        }
+
+        if ($this->userRepo->findByEmail($data['email'])) {
+            return ['email' => 'This email is already registered.'];
+        }
+
+        $passwordHash = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
+
+        return $this->userRepo->create([
+            'username'      => trim($data['username']),
+            'email'         => trim($data['email']),
+            'password_hash' => $passwordHash,
+            'role'          => 'user',
+            'status'        => 'pending',
         ]);
     }
 }

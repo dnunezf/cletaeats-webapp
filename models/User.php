@@ -11,6 +11,7 @@ class User
     public string $passwordHash;
     public string $role;
     public bool $isActive;
+    public string $status;
     public string $createdAt;
     public string $updatedAt;
 
@@ -23,6 +24,7 @@ class User
         $user->passwordHash = $data['password_hash'] ?? '';
         $user->role         = $data['role'] ?? 'user';
         $user->isActive     = (bool) ($data['is_active'] ?? true);
+        $user->status       = $data['status'] ?? 'active';
         $user->createdAt    = $data['created_at'] ?? '';
         $user->updatedAt    = $data['updated_at'] ?? '';
         return $user;
@@ -31,5 +33,10 @@ class User
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
     }
 }

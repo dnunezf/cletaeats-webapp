@@ -17,6 +17,35 @@ class AuthController
         view('auth/login', [], 'auth');
     }
 
+    public function showCreateAccount(): void
+    {
+        view('auth/create-account', [], 'auth');
+    }
+
+    public function createAccount(): void
+    {
+        csrfCheck();
+
+        $data = [
+            'username'         => trim($_POST['username'] ?? ''),
+            'email'            => trim($_POST['email'] ?? ''),
+            'password'         => $_POST['password'] ?? '',
+            'password_confirm' => $_POST['password_confirm'] ?? '',
+        ];
+
+        $result = $this->authService->createAccount($data);
+
+        if (is_array($result)) {
+            setFlash('errors', $result);
+            setOldInput($data);
+            redirect('create-account');
+            return;
+        }
+
+        setFlash('success', 'Your account has been created and is pending approval by an administrator.');
+        redirect('login');
+    }
+
     public function login(): void
     {
         csrfCheck();

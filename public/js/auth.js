@@ -52,6 +52,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Create Account form validation
+    const createAccountForm = document.getElementById('createAccountForm');
+    if (createAccountForm) {
+        createAccountForm.addEventListener('submit', (e) => {
+            const v = new FormValidator(createAccountForm);
+            const username = createAccountForm.querySelector('[name="username"]').value;
+            const email = createAccountForm.querySelector('[name="email"]').value;
+            const password = createAccountForm.querySelector('[name="password"]').value;
+            const passwordConfirm = createAccountForm.querySelector('[name="password_confirm"]').value;
+
+            v.required(username, 'username', 'Username')
+             .alphanumeric(username, 'username', 'Username')
+             .minLength(username, 3, 'username', 'Username')
+             .maxLength(username, 50, 'username', 'Username')
+             .required(email, 'email', 'Email')
+             .email(email, 'email')
+             .required(password, 'password', 'Password')
+             .minLength(password, 8, 'password', 'Password')
+             .maxLength(password, 72, 'password', 'Password')
+             .required(passwordConfirm, 'password_confirm', 'Password confirmation')
+             .matches(password, passwordConfirm, 'password_confirm', 'Password');
+
+            if (!v.isValid()) {
+                e.preventDefault();
+                v.showErrors();
+            }
+        });
+    }
+
     // Auto-dismiss flash messages
     document.querySelectorAll('.alert-close').forEach(btn => {
         btn.addEventListener('click', () => {

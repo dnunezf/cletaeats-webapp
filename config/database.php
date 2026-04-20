@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Database connection singleton using PDO.
+ * Database connection singleton using PDO (local MySQL).
  */
 class Database
 {

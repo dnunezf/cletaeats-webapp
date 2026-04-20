@@ -1,6 +1,6 @@
 -- ============================================
 -- CletaEats Web App - Database Schema
--- Run this script against the remote MySQL database.
+-- Run this script against the local MySQL database (cletaeats).
 -- Compatible with MySQL 5.5+
 -- ============================================
 

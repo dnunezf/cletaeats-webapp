@@ -64,4 +64,73 @@ class UserRepository
         $stmt = $this->db->prepare('UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?');
         return $stmt->execute([$status, $id]);
     }
+
+    public function findAll(): array
+    {
+        $stmt = $this->db->query('SELECT * FROM users ORDER BY created_at DESC');
+        return $stmt->fetchAll();
+    }
+
+    public function search(string $term): array
+    {
+        $like = '%' . $term . '%';
+        $stmt = $this->db->prepare(
+            'SELECT * FROM users
+             WHERE username LIKE ? OR email LIKE ? OR role LIKE ? OR status LIKE ?
+             ORDER BY created_at DESC'
+        );
+        $stmt->execute([$like, $like, $like, $like]);
+        return $stmt->fetchAll();
+    }
+
+    public function findByUsernameExcluding(string $username, int $excludeId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM users WHERE username = ? AND id <> ? LIMIT 1');
+        $stmt->execute([$username, $excludeId]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    public function findByEmailExcluding(string $email, int $excludeId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM users WHERE email = ? AND id <> ? LIMIT 1');
+        $stmt->execute([$email, $excludeId]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    public function update(int $id, array $data): bool
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users
+             SET username = ?, email = ?, role = ?, status = ?, is_active = ?, updated_at = NOW()
+             WHERE id = ?'
+        );
+        return $stmt->execute([
+            $data['username'],
+            $data['email'],
+            $data['role'],
+            $data['status'],
+            (int) $data['is_active'],
+            $id,
+        ]);
+    }
+
+    public function updatePassword(int $id, string $passwordHash): bool
+    {
+        $stmt = $this->db->prepare('UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?');
+        return $stmt->execute([$passwordHash, $id]);
+    }
+
+    public function delete(int $id): bool
+    {
+        $stmt = $this->db->prepare('DELETE FROM users WHERE id = ?');
+        return $stmt->execute([$id]);
+    }
+
+    public function countAdmins(): int
+    {
+        $stmt = $this->db->query("SELECT COUNT(*) FROM users WHERE role = 'admin' AND is_active = 1");
+        return (int) $stmt->fetchColumn();
+    }
 }

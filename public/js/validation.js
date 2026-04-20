@@ -70,10 +70,11 @@ class FormValidator {
     }
 
     showErrors() {
-        // Clear previous errors
+        // Snapshot before clearing: clearErrors() resets this.errors.
+        const pending = { ...this.errors };
         this.clearErrors();
 
-        for (const [field, message] of Object.entries(this.errors)) {
+        for (const [field, message] of Object.entries(pending)) {
             const input = this.form.querySelector(`[name="${field}"]`);
             const errorEl = this.form.querySelector(`#${field}-error`);
 

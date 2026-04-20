@@ -67,7 +67,7 @@ class CustomerService
 
     public function delete(int $id): bool
     {
-        return $this->repo->softDelete($id);
+        return $this->repo->delete($id);
     }
 
     private function validate(array $data): array

@@ -1,0 +1,115 @@
+/* ============================================
+   RESTAURANT MODULE STYLES
+   ============================================ */
+
+/* Restaurant Cards (mobile view) */
+.restaurant-cards {
+    display: none;
+    gap: var(--space-md);
+}
+
+.restaurant-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-lg);
+    transition: box-shadow var(--transition-fast);
+}
+
+.restaurant-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.restaurant-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-md);
+}
+
+.restaurant-card-name {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.restaurant-card-type {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-xs);
+}
+
+.restaurant-card-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-divider);
+}
+
+.restaurant-card-detail {
+    font-size: var(--font-size-xs);
+}
+
+.restaurant-card-detail-label {
+    color: var(--color-text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.restaurant-card-detail-value {
+    color: var(--color-text);
+}
+
+.restaurant-card-actions {
+    display: flex;
+    gap: var(--space-sm);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-divider);
+}
+
+.restaurant-card-actions .btn {
+    flex: 1;
+}
+
+/* Restaurant Form */
+.restaurant-form-container {
+    max-width: 720px;
+}
+
+.restaurant-form-container .card {
+    padding: var(--space-xl);
+}
+
+/* Form Section Title (local to restaurant forms) */
+.form-section-title {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--color-divider);
+}
+
+.form-section-title:first-child {
+    margin-top: 0;
+}
+
+/* Responsive switch: desktop table -> mobile cards */
+@media (max-width: 768px) {
+    .restaurant-cards {
+        display: grid;
+    }
+}
+
+@media (max-width: 480px) {
+    .restaurant-card-details {
+        grid-template-columns: 1fr;
+    }
+}

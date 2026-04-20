@@ -37,3 +37,20 @@ CREATE TABLE IF NOT EXISTS customers (
     INDEX idx_customers_email (email),
     INDEX idx_customers_name (first_name, last_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS restaurants (
+    id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name              VARCHAR(100)  NOT NULL,
+    legal_id          VARCHAR(30)   NOT NULL UNIQUE,
+    address           VARCHAR(255)  NOT NULL,
+    food_type         VARCHAR(50)   NOT NULL,
+    combo_name        VARCHAR(100)  NOT NULL,
+    combo_description VARCHAR(255)  DEFAULT NULL,
+    combo_price       DECIMAL(10,2) NOT NULL,
+    is_active         TINYINT(1)    NOT NULL DEFAULT 1,
+    created_at        TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME      DEFAULT NULL,
+    INDEX idx_restaurants_legal_id (legal_id),
+    INDEX idx_restaurants_name (name),
+    INDEX idx_restaurants_food_type (food_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

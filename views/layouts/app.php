@@ -1,3 +1,10 @@
+<?php
+$asset = static function (string $path): string {
+    $file = BASE_PATH . '/public/' . ltrim($path, '/');
+    $ver  = is_file($file) ? (string) filemtime($file) : '0';
+    return baseUrl($path) . '?v=' . $ver;
+};
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,13 +12,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="base-url" content="<?= e(APP_URL) ?>">
     <title><?= e($pageTitle ?? 'Dashboard') ?> - <?= e(APP_NAME) ?></title>
-    <link rel="stylesheet" href="<?= baseUrl('css/variables.css') ?>">
-    <link rel="stylesheet" href="<?= baseUrl('css/reset.css') ?>">
-    <link rel="stylesheet" href="<?= baseUrl('css/layout.css') ?>">
-    <link rel="stylesheet" href="<?= baseUrl('css/components.css') ?>">
-    <link rel="stylesheet" href="<?= baseUrl('css/auth.css') ?>">
-    <link rel="stylesheet" href="<?= baseUrl('css/customers.css') ?>">
-    <link rel="stylesheet" href="<?= baseUrl('css/responsive.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/variables.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/reset.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/layout.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/components.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/auth.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/customers.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/restaurants.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/users.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/responsive.css') ?>">
 </head>
 <body>
     <?php require BASE_PATH . '/views/partials/nav.php'; ?>
@@ -22,9 +31,11 @@
         <?= $content ?>
     </main>
 
-    <script src="<?= baseUrl('js/validation.js') ?>"></script>
-    <script src="<?= baseUrl('js/app.js') ?>"></script>
-    <script src="<?= baseUrl('js/auth.js') ?>"></script>
-    <script src="<?= baseUrl('js/customers.js') ?>"></script>
+    <script src="<?= $asset('js/validation.js') ?>"></script>
+    <script src="<?= $asset('js/app.js') ?>"></script>
+    <script src="<?= $asset('js/auth.js') ?>"></script>
+    <script src="<?= $asset('js/customers.js') ?>"></script>
+    <script src="<?= $asset('js/restaurants.js') ?>"></script>
+    <script src="<?= $asset('js/users.js') ?>"></script>
 </body>
 </html>

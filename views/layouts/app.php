@@ -19,6 +19,7 @@ $asset = static function (string $path): string {
     <link rel="stylesheet" href="<?= $asset('css/auth.css') ?>">
     <link rel="stylesheet" href="<?= $asset('css/customers.css') ?>">
     <link rel="stylesheet" href="<?= $asset('css/restaurants.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/drivers.css') ?>">
     <link rel="stylesheet" href="<?= $asset('css/users.css') ?>">
     <link rel="stylesheet" href="<?= $asset('css/responsive.css') ?>">
 </head>
@@ -36,6 +37,7 @@ $asset = static function (string $path): string {
     <script src="<?= $asset('js/auth.js') ?>"></script>
     <script src="<?= $asset('js/customers.js') ?>"></script>
     <script src="<?= $asset('js/restaurants.js') ?>"></script>
+    <script src="<?= $asset('js/drivers.js') ?>"></script>
     <script src="<?= $asset('js/users.js') ?>"></script>
 </body>
 </html>

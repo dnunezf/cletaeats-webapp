@@ -28,6 +28,11 @@
             <span>Restaurants</span>
         </a>
 
+        <a href="<?= baseUrl('drivers') ?>" class="nav-item <?= ($currentPage ?? '') === 'drivers' ? 'active' : '' ?>">
+            <svg viewBox="0 0 24 24"><path d="M18 18.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5-1.5.67-1.5 1.5.67 1.5 1.5 1.5zM19.5 9.5h-1.84l-1.48-4.45C15.92 4.42 15.33 4 14.66 4H12v2h2.65l1.67 5H5.5c-1.38 0-2.5 1.12-2.5 2.5v3.5h2c0 1.66 1.34 3 3 3s3-1.34 3-3h4c0 1.66 1.34 3 3 3s3-1.34 3-3h2V14c0-2.76-2.24-4.5-4.5-4.5zM8 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM13 9H5c-.55 0-1 .45-1 1s.45 1 1 1h8V9z"/></svg>
+            <span>Delivery Drivers</span>
+        </a>
+
         <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
             <div class="nav-section-title">Administration</div>
 

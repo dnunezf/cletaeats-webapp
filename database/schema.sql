@@ -54,3 +54,26 @@ CREATE TABLE IF NOT EXISTS restaurants (
     INDEX idx_restaurants_name (name),
     INDEX idx_restaurants_food_type (food_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS delivery_drivers (
+    id                   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    full_name            VARCHAR(100)  NOT NULL,
+    id_number            VARCHAR(30)   NOT NULL UNIQUE,
+    email                VARCHAR(100)  NOT NULL,
+    address              VARCHAR(255)  NOT NULL,
+    phone                VARCHAR(20)   NOT NULL,
+    card_number          VARCHAR(32)   NOT NULL,
+    status               ENUM('available','busy') NOT NULL DEFAULT 'available',
+    order_distance       DECIMAL(8,2)  NOT NULL DEFAULT 0,
+    daily_kilometers     DECIMAL(8,2)  NOT NULL DEFAULT 0,
+    weekday_cost_per_km  DECIMAL(8,2)  NOT NULL DEFAULT 0,
+    holiday_cost_per_km  DECIMAL(8,2)  NOT NULL DEFAULT 0,
+    warning_count        TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    complaints           TEXT          DEFAULT NULL,
+    is_active            TINYINT(1)    NOT NULL DEFAULT 1,
+    created_at           TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at           DATETIME      DEFAULT NULL,
+    INDEX idx_drivers_id_number (id_number),
+    INDEX idx_drivers_full_name (full_name),
+    INDEX idx_drivers_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,3 +1,7 @@
+<?php
+/** @var array  $restaurant  Restaurant row with combo_name, combo_price, food_type */
+/** @var array  $customers   Active customer rows */
+?>
 <?php $currentPage = 'orders'; ?>
 <?php $errors = getFlash('errors') ?? []; ?>
 
@@ -8,6 +12,12 @@
         Change Restaurant
     </a>
 </div>
+
+<?php if (!empty($errors['general'])): ?>
+    <div class="alert alert-error" role="alert">
+        <span><?= e($errors['general']) ?></span>
+    </div>
+<?php endif; ?>
 
 <div class="order-form-layout">
     <!-- Form -->

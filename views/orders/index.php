@@ -1,5 +1,9 @@
+<?php
+/** @var array[] $orders  Order rows joined with customer, restaurant, driver */
+/** @var bool   $isAdmin  True when the authenticated user is an admin */
+/** @var string $search   Current search term (empty string if none) */
+?>
 <?php $currentPage = 'orders'; ?>
-<?php $isAdmin = (($_SESSION['role'] ?? '') === 'admin'); ?>
 
 <div class="page-header">
     <h2 class="page-title">Orders</h2>
@@ -63,6 +67,7 @@
                     <th>Combo</th>
                     <th style="width: 60px;">Qty</th>
                     <th style="width: 100px;">Total</th>
+                    <th>Driver</th>
                     <th style="width: 110px;">Status</th>
                     <th style="width: 110px;">Date</th>
                     <th style="width: 100px;">Actions</th>
@@ -82,9 +87,12 @@
                         <td><?= e($o['combo_name']) ?></td>
                         <td style="text-align: center;"><?= (int) $o['quantity'] ?></td>
                         <td>$<?= e(number_format((float) $o['total'], 2)) ?></td>
+                        <td style="font-size: var(--font-size-sm);">
+                            <?= !empty($o['driver_name']) ? e($o['driver_name']) : '<span style="color:var(--color-text-secondary)">—</span>' ?>
+                        </td>
                         <td>
                             <span class="order-status order-status-<?= e($o['status']) ?>">
-                                <?= ucfirst(e($o['status'])) ?>
+                                <?= e(Order::displayStatus($o['status'])) ?>
                             </span>
                         </td>
                         <td style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">
@@ -123,7 +131,7 @@
                         <div class="order-card-restaurant"><?= e($o['restaurant_name']) ?></div>
                     </div>
                     <span class="order-status order-status-<?= e($o['status']) ?>">
-                        <?= ucfirst(e($o['status'])) ?>
+                        <?= e(Order::displayStatus($o['status'])) ?>
                     </span>
                 </div>
                 <div class="order-card-details">
@@ -142,6 +150,12 @@
                     <div class="order-card-detail">
                         <div class="order-card-detail-label">Date</div>
                         <div class="order-card-detail-value"><?= e(date('M j, Y', strtotime($o['created_at']))) ?></div>
+                    </div>
+                    <div class="order-card-detail">
+                        <div class="order-card-detail-label">Driver</div>
+                        <div class="order-card-detail-value">
+                            <?= !empty($o['driver_name']) ? e($o['driver_name']) : '—' ?>
+                        </div>
                     </div>
                 </div>
                 <div class="order-card-actions">

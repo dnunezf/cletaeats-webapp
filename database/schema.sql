@@ -79,20 +79,24 @@ CREATE TABLE IF NOT EXISTS delivery_drivers (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS orders (
-    id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    customer_id   INT UNSIGNED  NOT NULL,
-    restaurant_id INT UNSIGNED  NOT NULL,
-    combo_name    VARCHAR(100)  NOT NULL,
-    combo_price   DECIMAL(10,2) NOT NULL,
-    quantity      INT UNSIGNED  NOT NULL DEFAULT 1,
-    total         DECIMAL(10,2) NOT NULL,
-    status        ENUM('pending','confirmed','delivered','cancelled') NOT NULL DEFAULT 'pending',
-    notes         VARCHAR(500)  DEFAULT NULL,
-    created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    DATETIME      DEFAULT NULL,
+    id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    customer_id       INT UNSIGNED  NOT NULL,
+    restaurant_id     INT UNSIGNED  NOT NULL,
+    assigned_driver_id INT UNSIGNED DEFAULT NULL,
+    combo_name        VARCHAR(100)  NOT NULL,
+    combo_price       DECIMAL(10,2) NOT NULL,
+    quantity          INT UNSIGNED  NOT NULL DEFAULT 1,
+    total             DECIMAL(10,2) NOT NULL,
+    status            ENUM('preparing','on_the_way','suspended','delivered') NOT NULL DEFAULT 'preparing',
+    notes             VARCHAR(500)  DEFAULT NULL,
+    created_at        TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    delivered_at      DATETIME      DEFAULT NULL,
+    updated_at        DATETIME      DEFAULT NULL,
     INDEX idx_orders_customer (customer_id),
     INDEX idx_orders_restaurant (restaurant_id),
+    INDEX idx_orders_driver (assigned_driver_id),
     INDEX idx_orders_status (status),
-    CONSTRAINT fk_orders_customer   FOREIGN KEY (customer_id)   REFERENCES customers(id)   ON DELETE RESTRICT,
-    CONSTRAINT fk_orders_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE RESTRICT
+    CONSTRAINT fk_orders_customer   FOREIGN KEY (customer_id)        REFERENCES customers(id)        ON DELETE RESTRICT,
+    CONSTRAINT fk_orders_restaurant FOREIGN KEY (restaurant_id)      REFERENCES restaurants(id)      ON DELETE RESTRICT,
+    CONSTRAINT fk_orders_driver     FOREIGN KEY (assigned_driver_id) REFERENCES delivery_drivers(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

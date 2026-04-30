@@ -103,6 +103,77 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Status update (show page, admin only)
+    const statusForm = document.getElementById('orderStatusForm');
+    if (statusForm) {
+        const statusInput = document.getElementById('statusInput');
+
+        statusForm.querySelectorAll('.status-action-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (statusInput) statusInput.value = btn.dataset.status;
+                statusForm.dispatchEvent(new Event('submit', { cancelable: true }));
+            });
+        });
+
+        statusForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const newStatus = statusInput ? statusInput.value : '';
+            if (!newStatus) return;
+
+            statusForm.querySelectorAll('.status-action-btn').forEach(b => { b.disabled = true; });
+
+            fetch(statusForm.action, {
+                method: 'POST',
+                body: new FormData(statusForm),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const badge = document.getElementById('orderStatusBadge');
+                    if (badge) {
+                        badge.className = 'order-status order-status-' + data.status;
+                        badge.textContent = data.status
+                            .split('_')
+                            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                            .join(' ');
+                    }
+
+                    if (data.delivered_at) {
+                        const dt = new Date(data.delivered_at.replace(' ', 'T'));
+                        const label = 'Delivered ' + dt.toLocaleDateString('en-US', {
+                            month: 'long', day: 'numeric', year: 'numeric'
+                        }) + ' at ' + dt.toLocaleTimeString('en-US', {
+                            hour: 'numeric', minute: '2-digit'
+                        });
+                        let deliveredEl = document.querySelector('.order-detail-delivered-at');
+                        if (deliveredEl) {
+                            deliveredEl.textContent = label;
+                        } else {
+                            const dateEl = document.querySelector('.order-detail-date');
+                            if (dateEl) {
+                                const div = document.createElement('div');
+                                div.className = 'order-detail-delivered-at';
+                                div.textContent = label;
+                                dateEl.after(div);
+                            }
+                        }
+                    } else {
+                        const deliveredEl = document.querySelector('.order-detail-delivered-at');
+                        if (deliveredEl) deliveredEl.remove();
+                    }
+
+                    showFlashMessage('Order status updated.', 'success');
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    showFlashMessage(data.message || 'An error occurred.', 'error');
+                    statusForm.querySelectorAll('.status-action-btn').forEach(b => { b.disabled = false; });
+                }
+            })
+            .catch(() => statusForm.submit());
+        });
+    }
+
     // Order form validation
     const orderForm = document.getElementById('orderForm');
     if (orderForm) {

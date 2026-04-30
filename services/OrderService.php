@@ -1,18 +1,16 @@
 <?php
 
 /**
- * Order business logic: placement orchestration and validation.
+ * Order business logic: placement, status management, and validation.
  */
 class OrderService
 {
     private OrderRepository $repo;
-    private CustomerRepository $customerRepo;
     private RestaurantRepository $restaurantRepo;
 
     public function __construct()
     {
         $this->repo           = new OrderRepository();
-        $this->customerRepo   = new CustomerRepository();
         $this->restaurantRepo = new RestaurantRepository();
     }
 
@@ -38,6 +36,7 @@ class OrderService
     /**
      * Place a new order. Returns the new order ID on success or error array on failure.
      * Combo snapshot (name + price) is fetched server-side — not trusted from POST.
+     * Automatically assigns the first available driver with warning_count < 4.
      */
     public function place(array $data): int|array
     {
@@ -46,12 +45,47 @@ class OrderService
             return $errors;
         }
 
+        $driverId = $this->repo->findFirstAvailableDriverId();
+        if ($driverId === null) {
+            return ['errors' => ['general' => 'No delivery driver is currently available. Please try again later.']];
+        }
+
         $restaurant = $this->restaurantRepo->findById((int) $data['restaurant_id']);
-        $data['combo_name']  = $restaurant['combo_name'];
-        $data['combo_price'] = (float) $restaurant['combo_price'];
-        $data['total']       = $data['combo_price'] * (int) $data['quantity'];
+        $data['combo_name']         = $restaurant['combo_name'];
+        $data['combo_price']        = (float) $restaurant['combo_price'];
+        $data['total']              = $data['combo_price'] * (int) $data['quantity'];
+        $data['assigned_driver_id'] = $driverId;
+        $data['status']             = 'preparing';
 
         return $this->repo->create($data);
+    }
+
+    /**
+     * Update order status, enforcing the valid state machine.
+     * Sets delivered_at when transitioning to 'delivered', clears it otherwise.
+     */
+    public function updateStatus(int $id, string $newStatus): array|true
+    {
+        $order = $this->repo->findById($id);
+        if (!$order) {
+            return ['errors' => ['general' => 'Order not found.']];
+        }
+
+        $current = $order['status'];
+        $allowed = Order::transitions()[$current] ?? [];
+
+        if (!in_array($newStatus, Order::statuses(), true)) {
+            return ['errors' => ['status' => 'Invalid status value.']];
+        }
+
+        if (!in_array($newStatus, $allowed, true)) {
+            return ['errors' => ['status' => 'Invalid status transition from "' . Order::displayStatus($current) . '" to "' . Order::displayStatus($newStatus) . '".']];
+        }
+
+        $deliveredAt = $newStatus === 'delivered' ? date('Y-m-d H:i:s') : null;
+        $this->repo->updateStatus($id, $newStatus, $deliveredAt);
+
+        return true;
     }
 
     public function delete(int $id): bool

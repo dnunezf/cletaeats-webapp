@@ -14,24 +14,24 @@
     text-transform: capitalize;
 }
 
-.order-status-pending {
+.order-status-preparing {
     background: var(--color-warning-bg);
     color: var(--color-warning);
 }
 
-.order-status-confirmed {
+.order-status-on_the_way {
     background: var(--color-info-bg, #e8f4fd);
     color: var(--color-info, #1a7abf);
+}
+
+.order-status-suspended {
+    background: var(--color-error-bg, #fdecea);
+    color: var(--color-error);
 }
 
 .order-status-delivered {
     background: var(--color-success-bg);
     color: var(--color-success);
-}
-
-.order-status-cancelled {
-    background: var(--color-error-bg, #fdecea);
-    color: var(--color-error);
 }
 
 /* --- Browse page --- */
@@ -400,6 +400,76 @@
     font-weight: 700;
     font-size: var(--font-size-2xl, 1.75rem);
     color: var(--color-primary);
+}
+
+/* --- Order show: delivered-at line --- */
+.order-detail-delivered-at {
+    font-size: var(--font-size-xs);
+    color: var(--color-success);
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+/* --- Order show: driver card --- */
+.order-driver-section {
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-lg);
+    margin-top: var(--space-lg);
+}
+
+.order-driver-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+}
+
+.order-driver-avatar {
+    width: 40px;
+    height: 40px;
+    background: var(--color-primary-bg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.order-driver-name {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+}
+
+.order-driver-phone {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    margin-top: 2px;
+}
+
+/* --- Order show: status controls (admin) --- */
+.order-status-controls {
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-lg);
+    margin-top: var(--space-lg);
+}
+
+.order-status-controls-title {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-md);
+}
+
+.order-status-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
 }
 
 /* --- Responsive --- */

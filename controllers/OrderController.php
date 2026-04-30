@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Handles restaurant browsing and order placement.
+ * Handles restaurant browsing, order placement, and order management.
  */
 class OrderController
 {
@@ -23,9 +23,10 @@ class OrderController
             ? $this->orderService->search($search)
             : $this->orderService->getAll();
 
+        $isAdmin     = ($_SESSION['role'] ?? '') === 'admin';
         $pageTitle   = 'Orders';
         $currentPage = 'orders';
-        view('orders/index', compact('orders', 'pageTitle', 'currentPage', 'search'));
+        view('orders/index', compact('orders', 'isAdmin', 'pageTitle', 'currentPage', 'search'));
     }
 
     public function browse(): void
@@ -69,7 +70,8 @@ class OrderController
         $result = $this->orderService->place($data);
 
         if (is_array($result)) {
-            setFlash('errors', $result);
+            $errors = $result['errors'] ?? $result;
+            setFlash('errors', $errors);
             setOldInput($data);
             redirect('orders/create?restaurant_id=' . (int) $data['restaurant_id']);
             return;
@@ -94,6 +96,50 @@ class OrderController
         $pageTitle   = 'Order #' . $id;
         $currentPage = 'orders';
         view('orders/show', compact('order', 'isAdmin', 'pageTitle', 'currentPage'));
+    }
+
+    public function updateStatus(): void
+    {
+        csrfCheck();
+
+        $id        = (int) ($_POST['id'] ?? 0);
+        $newStatus = trim($_POST['status'] ?? '');
+
+        if ($id <= 0) {
+            if (isAjax()) {
+                jsonResponse(['success' => false, 'message' => 'Invalid order ID.'], 400);
+            }
+            redirect('orders');
+            return;
+        }
+
+        $result = $this->orderService->updateStatus($id, $newStatus);
+
+        if ($result !== true) {
+            $msg = array_values($result['errors'])[0] ?? 'An error occurred.';
+            if (isAjax()) {
+                jsonResponse(['success' => false, 'message' => $msg], 422);
+            }
+            setFlash('error', $msg);
+            redirect('orders/show?id=' . $id);
+            return;
+        }
+
+        $order = $this->orderService->getById($id);
+        $deliveredAt = $order['delivered_at'] ?? null;
+
+        if (isAjax()) {
+            jsonResponse([
+                'success'      => true,
+                'message'      => 'Order status updated.',
+                'status'       => $newStatus,
+                'delivered_at' => $deliveredAt,
+            ]);
+            return;
+        }
+
+        setFlash('success', 'Order status updated.');
+        redirect('orders/show?id=' . $id);
     }
 
     public function delete(): void

@@ -41,7 +41,10 @@ class OrderRepository
                     r.food_type,
                     r.address      AS restaurant_address,
                     d.full_name    AS driver_name,
-                    d.phone        AS driver_phone
+                    d.phone        AS driver_phone,
+                    d.order_distance       AS driver_order_distance,
+                    d.weekday_cost_per_km  AS driver_weekday_cost_per_km,
+                    d.holiday_cost_per_km  AS driver_holiday_cost_per_km
              FROM orders o
              JOIN customers c    ON c.id = o.customer_id
              JOIN restaurants r  ON r.id = o.restaurant_id

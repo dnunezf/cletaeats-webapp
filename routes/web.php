@@ -24,6 +24,8 @@ return [
         'orders/browse'      => ['controller' => 'OrderController',      'method' => 'browse',            'middleware' => ['auth']],
         'orders/create'      => ['controller' => 'OrderController',      'method' => 'create',            'middleware' => ['auth']],
         'orders/show'        => ['controller' => 'OrderController',      'method' => 'show',              'middleware' => ['auth']],
+        'billing/show'       => ['controller' => 'BillingController',    'method' => 'show',              'middleware' => ['auth']],
+        'reports'            => ['controller' => 'ReportsController',    'method' => 'index',             'middleware' => ['auth', 'admin']],
         'users'              => ['controller' => 'UserController',       'method' => 'index',             'middleware' => ['auth', 'admin']],
         'users/edit'         => ['controller' => 'UserController',       'method' => 'edit',              'middleware' => ['auth', 'admin']],
         'users/pending'      => ['controller' => 'UserController',       'method' => 'pending',           'middleware' => ['auth', 'admin']],

@@ -1,4 +1,5 @@
 <?php
+/** @var string $content  Rendered view output, captured via ob_get_clean() in view() helper */
 $asset = static function (string $path): string {
     $file = BASE_PATH . '/public/' . ltrim($path, '/');
     $ver  = is_file($file) ? (string) filemtime($file) : '0';
@@ -22,6 +23,8 @@ $asset = static function (string $path): string {
     <link rel="stylesheet" href="<?= $asset('css/drivers.css') ?>">
     <link rel="stylesheet" href="<?= $asset('css/users.css') ?>">
     <link rel="stylesheet" href="<?= $asset('css/orders.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/billing.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/reports.css') ?>">
     <link rel="stylesheet" href="<?= $asset('css/responsive.css') ?>">
 </head>
 <body>

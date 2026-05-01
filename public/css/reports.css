@@ -1,0 +1,216 @@
+/* ============================================================
+   Reports module styles
+   ============================================================ */
+
+/* --- Date filter bar --- */
+.reports-filter-bar {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.reports-filter-fields {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.reports-filter-label {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.reports-filter-input {
+    width: 160px;
+}
+
+.reports-filter-active {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-sm);
+}
+
+/* --- KPI grid --- */
+.reports-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.reports-kpi-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.reports-kpi-label {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-secondary);
+}
+
+.reports-kpi-value {
+    font-size: var(--font-size-2xl, 1.75rem);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    line-height: 1.1;
+}
+
+.reports-kpi-primary { color: var(--color-primary); }
+.reports-kpi-success { color: var(--color-success); }
+.reports-kpi-danger  { color: var(--color-error); }
+
+.reports-kpi-sub {
+    display: block;
+    font-size: var(--font-size-xs);
+    font-weight: 400;
+    color: var(--color-text-secondary);
+    margin-top: 2px;
+}
+
+/* --- Sections --- */
+.reports-section {
+    padding: var(--space-xl);
+    margin-bottom: var(--space-lg);
+}
+
+.reports-section-header {
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.reports-section-title {
+    font-size: var(--font-size-md);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.reports-subsection-title {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+}
+
+/* --- Highlight cards (top / bottom restaurant) --- */
+.reports-highlight-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.reports-highlight {
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.reports-highlight-top {
+    background: var(--color-success-bg);
+    border: 1px solid var(--color-success);
+}
+
+.reports-highlight-bottom {
+    background: var(--color-warning-bg);
+    border: 1px solid var(--color-warning);
+}
+
+.reports-highlight-badge {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.reports-highlight-top .reports-highlight-badge { color: var(--color-success); }
+.reports-highlight-bottom .reports-highlight-badge { color: var(--color-warning); }
+
+.reports-highlight-name {
+    font-weight: 700;
+    font-size: var(--font-size-md);
+    color: var(--color-text-primary);
+}
+
+.reports-highlight-stat {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+/* --- Two-column layout for orders breakdown --- */
+.reports-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+}
+
+/* --- Badges (used in reports) --- */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-success {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.badge-danger {
+    background: var(--color-error-bg, #fdecea);
+    color: var(--color-error);
+}
+
+.badge-warning {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    .reports-kpi-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .reports-highlight-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .reports-two-col {
+        grid-template-columns: 1fr;
+    }
+
+    .reports-filter-input {
+        width: 140px;
+    }
+}
+
+@media (max-width: 480px) {
+    .reports-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+}

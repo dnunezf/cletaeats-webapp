@@ -30,3 +30,8 @@ class Database
     private function __construct() {}
     private function __clone() {}
 }
+
+// Backward compatibility - provide $pdo variable for API files
+if (!isset($pdo)) {
+    $pdo = Database::getConnection();
+}

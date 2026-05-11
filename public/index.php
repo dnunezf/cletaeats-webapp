@@ -73,9 +73,54 @@ if ($url === '') {
     redirect('login');
 }
 
-// Load routes
-$routes = require BASE_PATH . '/routes/web.php';
+// Handle API routes
+$apiRoutes = [
+    // Auth API
+    'auth/login' => ['file' => 'api/login.php', 'methods' => ['POST', 'OPTIONS']],
+    'auth/me' => ['file' => 'api/auth/me.php', 'methods' => ['GET', 'OPTIONS']],
+
+    // Users API
+    'users/add' => ['file' => 'api/users/add.php', 'methods' => ['POST', 'OPTIONS']],
+
+    // Carts/Orders API
+    'carts' => ['file' => 'api/carts/index.php', 'methods' => ['GET', 'OPTIONS']],
+    'carts/add' => ['file' => 'api/carts/add.php', 'methods' => ['POST', 'OPTIONS']],
+
+    // Posts/Addresses API
+    'posts/add' => ['file' => 'api/posts/add.php', 'methods' => ['POST', 'OPTIONS']],
+
+    // Products API
+    'products' => ['file' => 'api/products/index.php', 'methods' => ['GET', 'OPTIONS']],
+    'products/search' => ['file' => 'api/products/search.php', 'methods' => ['GET', 'OPTIONS']],
+];
+
 $httpMethod = $_SERVER['REQUEST_METHOD'];
+
+// Check for exact API match first
+if (isset($apiRoutes[$url]) && in_array($httpMethod, $apiRoutes[$url]['methods'])) {
+    require BASE_PATH . '/' . $apiRoutes[$url]['file'];
+    exit;
+}
+
+// Check for dynamic API routes
+// Pattern: carts/user/{userId}, carts/{id}, posts/user/{userId}, posts/{id}, products/{id}
+$patterns = [
+    '#^carts/user/(\d+)$#' => ['file' => 'api/carts/user.php', 'methods' => ['GET', 'OPTIONS']],
+    '#^carts/(\d+)$#' => ['file' => 'api/carts/single.php', 'methods' => ['GET', 'PUT', 'DELETE', 'OPTIONS']],
+    '#^posts/user/(\d+)$#' => ['file' => 'api/posts/user.php', 'methods' => ['GET', 'OPTIONS']],
+    '#^posts/(\d+)$#' => ['file' => 'api/posts/single.php', 'methods' => ['GET', 'PUT', 'DELETE', 'OPTIONS']],
+    '#^products/(\d+)$#' => ['file' => 'api/products/single.php', 'methods' => ['GET', 'OPTIONS']],
+];
+
+foreach ($patterns as $pattern => $route) {
+    if (preg_match($pattern, $url) && in_array($httpMethod, $route['methods'])) {
+        require BASE_PATH . '/' . $route['file'];
+        exit;
+    }
+}
+
+// Load web routes
+$routes = require BASE_PATH . '/routes/web.php';
 
 // Match route
 if (!isset($routes[$httpMethod][$url])) {

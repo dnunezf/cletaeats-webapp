@@ -100,3 +100,5 @@ CREATE TABLE IF NOT EXISTS orders (
     CONSTRAINT fk_orders_restaurant FOREIGN KEY (restaurant_id)      REFERENCES restaurants(id)      ON DELETE RESTRICT,
     CONSTRAINT fk_orders_driver     FOREIGN KEY (assigned_driver_id) REFERENCES delivery_drivers(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+sp_

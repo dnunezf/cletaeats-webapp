@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/../../helpers/error_handler.php';
 require_once __DIR__ . '/../config/env.php';
 loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../config/database.php';
@@ -22,17 +23,10 @@ $userId = end($segments);
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 
 // Get orders for user and format as carts
-$stmt = $pdo->prepare("
-    SELECT o.id, o.customer_id as userId, o.combo_name as title, o.combo_price as price, 
-           o.quantity, o.total, o.status, o.notes, o.created_at,
-           r.name as restaurant_name, r.combo_description
-    FROM orders o
-    JOIN restaurants r ON o.restaurant_id = r.id
-    WHERE o.customer_id = ?
-    LIMIT ?
-");
+$stmt = $pdo->prepare("CALL sp_order_get_by_user(?, ?)");
 $stmt->execute([$userId, $limit]);
 $orders = $stmt->fetchAll();
+$stmt->closeCursor();
 
 $carts = [];
 foreach ($orders as $order) {

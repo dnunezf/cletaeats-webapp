@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/../../helpers/error_handler.php';
 require_once __DIR__ . '/../config/env.php';
 loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../config/database.php';
@@ -28,14 +29,10 @@ if (empty($query)) {
 $searchTerm = '%' . $query . '%';
 
 // Search restaurants by name, combo_name, or food_type
-$stmt = $pdo->prepare("
-    SELECT id, name, combo_name, combo_description, combo_price, food_type, is_active
-    FROM restaurants
-    WHERE is_active = 1 
-    AND (name LIKE ? OR combo_name LIKE ? OR food_type LIKE ? OR combo_description LIKE ?)
-");
-$stmt->execute([$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+$stmt = $pdo->prepare("CALL sp_restaurant_search(?)");
+$stmt->execute([$searchTerm]);
 $restaurants = $stmt->fetchAll();
+$stmt->closeCursor();
 
 $products = [];
 foreach ($restaurants as $restaurant) {

@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
-
+require_once __DIR__ . '/../../helpers/error_handler.php';
 require_once __DIR__ . '/../config/env.php';
 loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../config/database.php';
@@ -120,8 +120,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     // Soft delete - mark as deleted or remove
-    $stmt = $pdo->prepare("DELETE FROM orders WHERE id = ?");
+    $stmt = $pdo->prepare("CALL sp_order_delete(?)");
     $stmt->execute([$cartId]);
+    $stmt->closeCursor();
 
     echo json_encode([
         'id' => (int)$cartId,

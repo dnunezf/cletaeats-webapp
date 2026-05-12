@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
-
+require_once __DIR__ . '/../../helpers/error_handler.php';
 require_once __DIR__ . '/../config/env.php';
 loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../config/database.php';
@@ -32,14 +32,16 @@ $productId = $product['id'];
 $quantity = $product['quantity'];
 
 // Get restaurant info - using product ID as restaurant ID for mapping
-$stmt = $pdo->prepare("SELECT id, name, combo_name, combo_price, combo_description FROM restaurants WHERE id = ?");
+$stmt = $pdo->prepare("CALL sp_restaurant_get_by_id(?)");
 $stmt->execute([$productId]);
 $restaurant = $stmt->fetch();
+$stmt->closeCursor();
 
 if (!$restaurant) {
     // If no restaurant found with that ID, get the first available
-    $stmt = $pdo->query("SELECT id, name, combo_name, combo_price, combo_description FROM restaurants LIMIT 1");
+    $stmt = $pdo->query("CALL sp_restaurant_get_first()");
     $restaurant = $stmt->fetch();
+    $stmt->closeCursor();
 }
 
 if (!$restaurant) {
@@ -51,10 +53,7 @@ if (!$restaurant) {
 $total = $restaurant['combo_price'] * $quantity;
 
 // Insert order
-$stmt = $pdo->prepare("
-    INSERT INTO orders (customer_id, restaurant_id, combo_name, combo_price, quantity, total, status)
-    VALUES (?, ?, ?, ?, ?, ?, 'preparing')
-");
+$stmt = $pdo->prepare("CALL sp_order_create(?, ?, ?, ?, ?, ?, 'preparing')");
 $stmt->execute([
     $userId,
     $restaurant['id'],
@@ -64,7 +63,9 @@ $stmt->execute([
     $total
 ]);
 
-$orderId = $pdo->lastInsertId();
+$result = $stmt->fetch();
+$stmt->closeCursor();
+$orderId = $result['order_id'];
 
 echo json_encode([
     'id' => (int)$orderId,

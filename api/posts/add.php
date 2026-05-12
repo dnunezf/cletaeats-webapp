@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/../../helpers/error_handler.php';
 require_once __DIR__ . '/../config/env.php';
 loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../config/database.php';
@@ -41,13 +42,12 @@ $phone = $tags[2] ?? '';
 $email = strtolower(str_replace(' ', '.', $title)) . '.' . time() . '@example.com';
 
 // Insert as customer
-$stmt = $pdo->prepare("
-    INSERT INTO customers (first_name, last_name, email, address, city, postal_code, phone_number)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-");
+$stmt = $pdo->prepare("CALL sp_customer_create(?, ?, ?, ?, ?, ?, ?)");
 $stmt->execute([$firstName, $lastName, $email, $body, $city, $postalCode, $phone]);
 
-$customerId = $pdo->lastInsertId();
+$result = $stmt->fetch();
+$stmt->closeCursor();
+$customerId = $result['customer_id'];
 
 echo json_encode([
     'id' => (int)$customerId,

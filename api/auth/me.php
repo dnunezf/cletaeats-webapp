@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
-
+require_once __DIR__ . '/../../helpers/error_handler.php';
 require_once __DIR__ . '/../config/env.php';
 loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../config/database.php';
@@ -35,9 +35,10 @@ if (!$tokenData || !isset($tokenData['id']) || !isset($tokenData['exp']) || $tok
 $userId = $tokenData['id'];
 
 // Get user from database
-$stmt = $pdo->prepare("SELECT id, username, email, first_name, last_name, image, role FROM users WHERE id = ?");
+$stmt = $pdo->prepare("CALL sp_user_get_by_id(?)");
 $stmt->execute([$userId]);
 $user = $stmt->fetch();
+$stmt->closeCursor();
 
 if (!$user) {
     http_response_code(404);

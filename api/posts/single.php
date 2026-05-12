@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/../../helpers/error_handler.php';
 require_once __DIR__ . '/../config/env.php';
 loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../config/database.php';
@@ -20,13 +21,10 @@ $postId = end($segments);
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Get single address formatted as post
-    $stmt = $pdo->prepare("
-        SELECT id, first_name, last_name, email, address, city, postal_code, phone_number
-        FROM customers
-        WHERE id = ?
-    ");
+    $stmt = $pdo->prepare("CALL sp_customer_get_by_id(?)");
     $stmt->execute([$postId]);
     $customer = $stmt->fetch();
+    $stmt->closeCursor();
 
     if (!$customer) {
         http_response_code(404);
@@ -61,12 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $city = $tags[0] ?? '';
     $postalCode = $tags[1] ?? '';
 
-    $stmt = $pdo->prepare("
-        UPDATE customers 
-        SET first_name = ?, last_name = ?, address = ?, city = ?, postal_code = ?, updated_at = NOW()
-        WHERE id = ?
-    ");
-    $stmt->execute([$firstName, $lastName, $body, $city, $postalCode, $postId]);
+    $stmt = $pdo->prepare("CALL sp_customer_update(?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$postId, $firstName, $lastName, $body, $city, $postalCode]);
+    $stmt->closeCursor();
 
     echo json_encode([
         'id' => (int)$postId,
@@ -81,10 +76,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     // Note: Actually deleting a customer might have foreign key constraints
     // So we'll just mark it or return success
-    $stmt = $pdo->prepare("DELETE FROM customers WHERE id = ?");
+    $stmt = $pdo->prepare("CALL sp_customer_delete(?)");
     
     try {
         $stmt->execute([$postId]);
+        $stmt->closeCursor();
         echo json_encode([
             'id' => (int)$postId,
             'title' => '',

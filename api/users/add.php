@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
-
+require_once __DIR__ . '/../../helpers/error_handler.php';
 require_once __DIR__ . '/../../config/env.php';
 loadEnv(__DIR__ . '/../../.env');
 require_once __DIR__ . '/../../config/database.php';
@@ -40,31 +40,36 @@ $age = $data['age'] ?? 25;
 $gender = $data['gender'] ?? 'other';
 
 // Check if username already exists
-$stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+$stmt = $pdo->prepare("CALL sp_user_check_username(?)");
 $stmt->execute([$username]);
 if ($stmt->fetch()) {
+    $stmt->closeCursor();
     http_response_code(400);
     echo json_encode(['message' => 'Username already exists']);
     exit;
 }
+$stmt->closeCursor();
 
 // Check if email already exists
-$stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+$stmt = $pdo->prepare("CALL sp_user_check_email(?)");
 $stmt->execute([$email]);
 if ($stmt->fetch()) {
+    $stmt->closeCursor();
     http_response_code(400);
     echo json_encode(['message' => 'Email already exists']);
     exit;
 }
+$stmt->closeCursor();
 
 // Hash password
 $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
 // Insert new user
-$stmt = $pdo->prepare("INSERT INTO users (username, email, password_hash, first_name, last_name, role, status) VALUES (?, ?, ?, ?, ?, 'user', 'pending')");
-$stmt->execute([$username, $email, $passwordHash, $firstName, $lastName]);
+$stmt = $pdo->prepare("CALL sp_user_create(?, ?, ?, 'user', 'pending')");
+$stmt->execute([$username, $email, $passwordHash]);
 
-$userId = $pdo->lastInsertId();
+$result = $stmt->fetch();
+$userId = $result['user_id'];
 
 echo json_encode([
     'id' => (int)$userId,

@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/../../helpers/error_handler.php';
 require_once __DIR__ . '/../config/env.php';
 loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../config/database.php';
@@ -19,13 +20,10 @@ $segments = explode('/', trim($uri, '/'));
 $productId = end($segments);
 
 // Get single restaurant formatted as product
-$stmt = $pdo->prepare("
-    SELECT id, name, combo_name, combo_description, combo_price, food_type, is_active
-    FROM restaurants
-    WHERE id = ? AND is_active = 1
-");
+$stmt = $pdo->prepare("CALL sp_restaurant_get_by_id(?)");
 $stmt->execute([$productId]);
 $restaurant = $stmt->fetch();
+$stmt->closeCursor();
 
 if (!$restaurant) {
     http_response_code(404);

@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
-
+require_once __DIR__ . '/../../helpers/error_handler.php';
 require_once __DIR__ . '/../config/env.php';
 loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../config/database.php';
@@ -18,18 +18,15 @@ $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 30;
 $skip = isset($_GET['skip']) ? (int)$_GET['skip'] : 0;
 
 // Get restaurants formatted as products
-$stmt = $pdo->prepare("
-    SELECT id, name, combo_name, combo_description, combo_price, food_type, is_active
-    FROM restaurants
-    WHERE is_active = 1
-    LIMIT ? OFFSET ?
-");
+$stmt = $pdo->prepare("CALL sp_restaurant_get_all(?, ?)");
 $stmt->execute([$limit, $skip]);
 $restaurants = $stmt->fetchAll();
+$stmt->closeCursor();
 
 // Get total count
-$countStmt = $pdo->query("SELECT COUNT(*) FROM restaurants WHERE is_active = 1");
+$countStmt = $pdo->query("CALL sp_restaurant_count_active()");
 $total = $countStmt->fetchColumn();
+$countStmt->closeCursor();
 
 $products = [];
 foreach ($restaurants as $restaurant) {

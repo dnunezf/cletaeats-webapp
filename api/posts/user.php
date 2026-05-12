@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/../../helpers/error_handler.php';
 require_once __DIR__ . '/../config/env.php';
 loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/../config/database.php';
@@ -23,14 +24,15 @@ $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 
 // Use customers table as addresses
 // Map customer data to post format
-$stmt = $pdo->prepare("
-    SELECT id, first_name, last_name, email, address, city, postal_code, phone_number
-    FROM customers
-    WHERE id = ?
-    LIMIT ?
-");
-$stmt->execute([$userId, $limit]);
-$customers = $stmt->fetchAll();
+$stmt = $pdo->prepare("CALL sp_customer_get_by_id(?)");
+$stmt->execute([$userId]);
+$customer = $stmt->fetch();
+$stmt->closeCursor();
+
+$customers = [];
+if ($customer) {
+    $customers[] = $customer;
+}
 
 $posts = [];
 foreach ($customers as $customer) {

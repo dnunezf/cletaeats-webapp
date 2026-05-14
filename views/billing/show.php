@@ -1,28 +1,22 @@
 <?php
-/** @var array $invoice  Keys: order, subtotal, transport, vat, vat_rate, total_paid, transport_breakdown */
-$order    = $invoice['order'];
-$tb       = $invoice['transport_breakdown'];
+/** @var array $invoice Keys: order, items, subtotal, transport, vat, vat_rate, total_paid, transport_breakdown */
+$order = $invoice['order'];
+$items = $invoice['items'] ?? [];
+$tb    = $invoice['transport_breakdown'];
 ?>
 <?php $currentPage = 'orders'; ?>
 
 <div class="page-header no-print">
     <h2 class="page-title">Invoice — Order #<?= (int) $order['id'] ?></h2>
     <div style="display:flex; gap: var(--space-sm);">
-        <a href="<?= baseUrl('orders/show?id=' . (int) $order['id']) ?>" class="btn btn-ghost">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-            Back to Order
-        </a>
-        <button type="button" class="btn btn-outline" onclick="window.print()">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
-            Print Invoice
-        </button>
+        <a href="<?= baseUrl('orders/show?id=' . (int) $order['id']) ?>" class="btn btn-ghost">Back to Order</a>
+        <button type="button" class="btn btn-outline" onclick="window.print()">Print Invoice</button>
     </div>
 </div>
 
 <div class="invoice-wrapper">
     <div class="invoice-card card">
 
-        <!-- Invoice Header -->
         <div class="invoice-header">
             <div class="invoice-brand">
                 <div class="invoice-brand-icon">
@@ -35,13 +29,9 @@ $tb       = $invoice['transport_breakdown'];
             </div>
             <div class="invoice-meta">
                 <div class="invoice-number">Invoice #<?= (int) $order['id'] ?></div>
-                <div class="invoice-date">
-                    Issued: <?= e(date('F j, Y', strtotime($order['created_at']))) ?>
-                </div>
-                <?php if (!empty($order['delivered_at'])): ?>
-                <div class="invoice-date">
-                    Delivered: <?= e(date('F j, Y', strtotime($order['delivered_at']))) ?>
-                </div>
+                <div class="invoice-date">Issued: <?= e(date('F j, Y', strtotime($order['creation_date']))) ?></div>
+                <?php if (!empty($order['delivered_date'])): ?>
+                <div class="invoice-date">Delivered: <?= e(date('F j, Y', strtotime($order['delivered_date']))) ?></div>
                 <?php endif; ?>
                 <span class="order-status order-status-<?= e($order['status']) ?>" style="margin-top: 6px;">
                     <?= e(Order::displayStatus($order['status'])) ?>
@@ -49,7 +39,6 @@ $tb       = $invoice['transport_breakdown'];
             </div>
         </div>
 
-        <!-- Bill To / Restaurant -->
         <div class="invoice-parties">
             <div class="invoice-party">
                 <div class="invoice-party-label">Bill To</div>
@@ -57,34 +46,26 @@ $tb       = $invoice['transport_breakdown'];
                 <?php if (!empty($order['customer_email'])): ?>
                 <div class="invoice-party-detail"><?= e($order['customer_email']) ?></div>
                 <?php endif; ?>
-                <?php if (!empty($order['customer_phone'])): ?>
-                <div class="invoice-party-detail"><?= e($order['customer_phone']) ?></div>
-                <?php endif; ?>
+                <div class="invoice-party-detail">Card: <?= e($order['costumer_card_number'] ?? '') ?></div>
             </div>
             <div class="invoice-party">
                 <div class="invoice-party-label">Restaurant</div>
-                <div class="invoice-party-name"><?= e($order['restaurant_name']) ?></div>
+                <div class="invoice-party-name"><?= e($order['restaurant_name'] ?? '—') ?></div>
+                <?php if (!empty($order['category'])): ?>
                 <div class="invoice-party-detail">
-                    <span class="food-type-chip"><?= e($order['food_type']) ?></span>
+                    <span class="food-type-chip"><?= e(ucfirst($order['category'])) ?></span>
                 </div>
-                <?php if (!empty($order['restaurant_address'])): ?>
-                <div class="invoice-party-detail"><?= e($order['restaurant_address']) ?></div>
                 <?php endif; ?>
             </div>
             <div class="invoice-party">
                 <div class="invoice-party-label">Delivery Driver</div>
-                <?php if (!empty($order['driver_name'])): ?>
                 <div class="invoice-party-name"><?= e($order['driver_name']) ?></div>
-                <?php if (!empty($order['driver_phone'])): ?>
-                <div class="invoice-party-detail"><?= e($order['driver_phone']) ?></div>
-                <?php endif; ?>
-                <?php else: ?>
-                <div class="invoice-party-detail" style="color:var(--color-text-secondary);">Unassigned</div>
+                <?php if (!empty($order['driver_email'])): ?>
+                <div class="invoice-party-detail"><?= e($order['driver_email']) ?></div>
                 <?php endif; ?>
             </div>
         </div>
 
-        <!-- Line Items -->
         <table class="invoice-items-table">
             <thead>
                 <tr>
@@ -95,19 +76,24 @@ $tb       = $invoice['transport_breakdown'];
                 </tr>
             </thead>
             <tbody>
+                <?php foreach ($items as $line): ?>
                 <tr>
                     <td class="invoice-td">
-                        <div class="invoice-item-name"><?= e($order['combo_name']) ?></div>
-                        <div class="invoice-item-sub"><?= e($order['restaurant_name']) ?></div>
+                        <div class="invoice-item-name"><?= e($line['combo_name']) ?></div>
+                        <?php if (!empty($line['combo_description'])): ?>
+                        <div class="invoice-item-sub"><?= e($line['combo_description']) ?></div>
+                        <?php endif; ?>
                     </td>
-                    <td class="invoice-td" style="text-align:right;">$<?= e(number_format((float) $order['combo_price'], 2)) ?></td>
-                    <td class="invoice-td" style="text-align:center;"><?= (int) $order['quantity'] ?></td>
-                    <td class="invoice-td" style="text-align:right; font-weight:600;">$<?= e(number_format($invoice['subtotal'], 2)) ?></td>
+                    <td class="invoice-td" style="text-align:right;">$<?= e(number_format((float) $line['combo_price'], 2)) ?></td>
+                    <td class="invoice-td" style="text-align:center;"><?= (int) $line['quantity'] ?></td>
+                    <td class="invoice-td" style="text-align:right; font-weight:600;">
+                        $<?= e(number_format((float) $line['combo_price'] * (int) $line['quantity'], 2)) ?>
+                    </td>
                 </tr>
+                <?php endforeach; ?>
             </tbody>
         </table>
 
-        <!-- Totals Breakdown -->
         <div class="invoice-totals">
             <div class="invoice-totals-inner">
                 <div class="invoice-totals-row">
@@ -116,11 +102,11 @@ $tb       = $invoice['transport_breakdown'];
                 </div>
                 <div class="invoice-totals-row">
                     <span>
-                        Transport cost
+                        Delivery Fee
                         <?php if ($tb['has_driver']): ?>
                         <span class="invoice-totals-note">
-                            (<?= e(number_format($tb['distance'], 2)) ?> km × $<?= e(number_format($tb['rate'], 2)) ?>/km
-                            <?= $tb['is_weekend'] ? '· weekend rate' : '· weekday rate' ?>)
+                            (<?= $tb['is_weekend'] ? 'holiday rate' : 'regular rate' ?>:
+                            $<?= e(number_format($tb['rate'], 2)) ?>)
                         </span>
                         <?php endif; ?>
                     </span>
@@ -136,14 +122,6 @@ $tb       = $invoice['transport_breakdown'];
                 </div>
             </div>
         </div>
-
-        <!-- Notes -->
-        <?php if (!empty($order['notes'])): ?>
-        <div class="invoice-notes">
-            <div class="invoice-notes-label">Notes</div>
-            <div class="invoice-notes-body"><?= e($order['notes']) ?></div>
-        </div>
-        <?php endif; ?>
 
         <div class="invoice-footer no-print">
             <p>Thank you for choosing <?= e(APP_NAME) ?>!</p>

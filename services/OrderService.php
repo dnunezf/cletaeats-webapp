@@ -1,17 +1,21 @@
 <?php
 
 /**
- * Order business logic: placement, status management, and validation.
+ * Order placement + lifecycle. Uses invoice_lines for items, auto-assigns first available driver.
  */
 class OrderService
 {
     private OrderRepository $repo;
-    private RestaurantRepository $restaurantRepo;
+    private CustomerRepository $customerRepo;
+    private ComboRepository $comboRepo;
+    private DeliveryDriverRepository $driverRepo;
 
     public function __construct()
     {
-        $this->repo           = new OrderRepository();
-        $this->restaurantRepo = new RestaurantRepository();
+        $this->repo         = new OrderRepository();
+        $this->customerRepo = new CustomerRepository();
+        $this->comboRepo    = new ComboRepository();
+        $this->driverRepo   = new DeliveryDriverRepository();
     }
 
     public function getAll(): array
@@ -21,23 +25,25 @@ class OrderService
 
     public function getById(int $id): ?array
     {
-        return $this->repo->findById($id);
+        $order = $this->repo->findById($id);
+        if (!$order) {
+            return null;
+        }
+        $order['items'] = $this->repo->findInvoiceLines($id);
+        return $order;
+    }
+
+    public function getItems(int $orderId): array
+    {
+        return $this->repo->findInvoiceLines($orderId);
     }
 
     public function search(string $term): array
     {
         $term = trim($term);
-        if ($term === '') {
-            return $this->getAll();
-        }
-        return $this->repo->search($term);
+        return $term === '' ? $this->getAll() : $this->repo->search($term);
     }
 
-    /**
-     * Place a new order. Returns the new order ID on success or error array on failure.
-     * Combo snapshot (name + price) is fetched server-side — not trusted from POST.
-     * Automatically assigns the first available driver with warning_count < 4.
-     */
     public function place(array $data): int|array
     {
         $errors = $this->validate($data);
@@ -45,101 +51,113 @@ class OrderService
             return $errors;
         }
 
-        $driverId = $this->repo->findFirstAvailableDriverId();
+        $driverId = $this->driverRepo->findFirstAvailableDriverId();
         if ($driverId === null) {
-            return ['errors' => ['general' => 'No delivery driver is currently available. Please try again later.']];
+            return ['general' => 'No delivery driver is currently available. Please try again later.'];
         }
 
-        $restaurant = $this->restaurantRepo->findById((int) $data['restaurant_id']);
-        $data['combo_name']         = $restaurant['combo_name'];
-        $data['combo_price']        = (float) $restaurant['combo_price'];
-        $data['total']              = $data['combo_price'] * (int) $data['quantity'];
-        $data['assigned_driver_id'] = $driverId;
-        $data['status']             = 'preparing';
-
-        return $this->repo->create($data);
+        $pdo = Database::getConnection();
+        $pdo->beginTransaction();
+        try {
+            $orderId = $this->repo->create((int) $data['customer_id'], $driverId);
+            $this->repo->addInvoiceLine((int) $data['combo_id'], $orderId, (int) $data['quantity']);
+            $this->driverRepo->updateAvailability($driverId, 'occupied');
+            $pdo->commit();
+            return $orderId;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            return ['general' => 'Unable to place order: ' . $e->getMessage()];
+        }
     }
 
-    /**
-     * Update order status, enforcing the valid state machine.
-     * Sets delivered_at when transitioning to 'delivered', clears it otherwise.
-     */
     public function updateStatus(int $id, string $newStatus): array|true
     {
         $order = $this->repo->findById($id);
         if (!$order) {
             return ['errors' => ['general' => 'Order not found.']];
         }
-
         $current = $order['status'];
         $allowed = Order::transitions()[$current] ?? [];
 
         if (!in_array($newStatus, Order::statuses(), true)) {
             return ['errors' => ['status' => 'Invalid status value.']];
         }
-
         if (!in_array($newStatus, $allowed, true)) {
             return ['errors' => ['status' => 'Invalid status transition from "' . Order::displayStatus($current) . '" to "' . Order::displayStatus($newStatus) . '".']];
         }
 
-        $deliveredAt = $newStatus === 'delivered' ? date('Y-m-d H:i:s') : null;
-        $this->repo->updateStatus($id, $newStatus, $deliveredAt);
+        $deliveredDate = $newStatus === 'delivered' ? date('Y-m-d') : null;
 
-        return true;
+        $pdo = Database::getConnection();
+        $pdo->beginTransaction();
+        try {
+            $this->repo->updateStatus($id, $newStatus, $deliveredDate);
+
+            if (in_array($newStatus, ['delivered', 'cancelled'], true)) {
+                $driverId = (int) $order['driver_id'];
+                if (!$this->driverRepo->hasOngoingOrders($driverId)) {
+                    $this->driverRepo->updateAvailability($driverId, 'available');
+                }
+            }
+            $pdo->commit();
+            return true;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            return ['errors' => ['general' => 'Unable to update status: ' . $e->getMessage()]];
+        }
     }
 
     public function delete(int $id): bool
     {
-        return $this->repo->delete($id);
+        $pdo = Database::getConnection();
+        $pdo->beginTransaction();
+        try {
+            $items = $this->repo->findInvoiceLines($id);
+            foreach ($items as $line) {
+                $this->repo->deleteInvoiceLine((int) $line['combo_id'], $id);
+            }
+            // Remove any complaint linked to the order (foreign key constraint).
+            $complaintRepo = new ComplaintRepository();
+            if ($complaintRepo->findByOrderId($id)) {
+                $complaintRepo->delete($id);
+            }
+            $this->repo->delete($id);
+            $pdo->commit();
+            return true;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            return false;
+        }
     }
 
     private function validate(array $data): array
     {
         $errors = [];
-
-        $restaurantId = (int) ($data['restaurant_id'] ?? 0);
-        if ($restaurantId <= 0) {
-            $errors['restaurant_id'] = 'Please select a restaurant.';
-        } else {
-            $restaurant = $this->restaurantRepo->findById($restaurantId);
-            if (!$restaurant) {
-                $errors['restaurant_id'] = 'Selected restaurant is not available.';
-            }
-        }
-
         $customerId = (int) ($data['customer_id'] ?? 0);
         if ($customerId <= 0) {
             $errors['customer_id'] = 'Please select a customer.';
         } else {
-            $stmt = Database::getConnection()->prepare(
-                'SELECT id, is_active FROM customers WHERE id = ? LIMIT 1'
-            );
-            $stmt->execute([$customerId]);
-            $customer = $stmt->fetch();
+            $customer = $this->customerRepo->findById($customerId);
             if (!$customer) {
                 $errors['customer_id'] = 'Selected customer does not exist.';
-            } elseif (!(bool) $customer['is_active']) {
-                $errors['customer_id'] = 'This customer is currently suspended and cannot place orders.';
+            } elseif (($customer['status'] ?? '') !== 'active') {
+                $errors['customer_id'] = 'This customer is not active.';
             }
         }
 
-        $quantity = trim($data['quantity'] ?? '');
-        if ($quantity === '') {
-            $errors['quantity'] = 'Quantity is required.';
-        } elseif (!preg_match('/^\d+$/', $quantity)) {
+        $comboId = (int) ($data['combo_id'] ?? 0);
+        if ($comboId <= 0) {
+            $errors['combo_id'] = 'Please select a combo.';
+        } elseif (!$this->comboRepo->findById($comboId)) {
+            $errors['combo_id'] = 'Selected combo does not exist.';
+        }
+
+        $qty = trim($data['quantity'] ?? '');
+        if ($qty === '' || !preg_match('/^\d+$/', $qty)) {
             $errors['quantity'] = 'Quantity must be a positive integer.';
-        } else {
-            $qty = (int) $quantity;
-            if ($qty < 1 || $qty > 99) {
-                $errors['quantity'] = 'Quantity must be between 1 and 99.';
-            }
+        } elseif ((int) $qty < 1 || (int) $qty > 99) {
+            $errors['quantity'] = 'Quantity must be between 1 and 99.';
         }
-
-        $notes = trim($data['notes'] ?? '');
-        if (mb_strlen($notes) > 500) {
-            $errors['notes'] = 'Notes must not exceed 500 characters.';
-        }
-
         return $errors;
     }
 }

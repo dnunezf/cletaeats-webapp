@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Orchestrates all report queries and returns a structured dashboard array.
+ * Bundles reports data for the admin dashboard.
  */
 class ReportsService
 {
@@ -35,9 +35,9 @@ class ReportsService
             'orders_by_status'    => $ordersByStatus,
             'peak_hours'          => $peakHour,
             'orders_by_customer'  => $this->repo->ordersByCustomer($from, $to),
-            'active_customers'    => $this->repo->customersByStatus(1),
-            'suspended_customers' => $this->repo->customersByStatus(0),
-            'drivers'             => $this->enrichDrivers($drivers),
+            'active_customers'    => $this->repo->customersByStatus('active'),
+            'suspended_customers' => $this->repo->customersByStatus('inactive'),
+            'drivers'             => $drivers,
         ];
     }
 
@@ -58,19 +58,5 @@ class ReportsService
             return null;
         }
         return end($withOrders) ?: null;
-    }
-
-    /**
-     * Parses the TEXT complaints column into a per-driver count.
-     */
-    private function enrichDrivers(array $drivers): array
-    {
-        foreach ($drivers as &$d) {
-            $text  = trim($d['complaints'] ?? '');
-            $lines = $text !== '' ? array_filter(array_map('trim', explode("\n", $text))) : [];
-            $d['complaint_count'] = count($lines);
-        }
-        unset($d);
-        return $drivers;
     }
 }

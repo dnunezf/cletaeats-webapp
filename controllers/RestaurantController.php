@@ -1,8 +1,5 @@
 <?php
 
-/**
- * Handles restaurant CRUD operations.
- */
 class RestaurantController
 {
     private RestaurantService $restaurantService;
@@ -15,9 +12,7 @@ class RestaurantController
     public function index(): void
     {
         $search = trim($_GET['search'] ?? '');
-        $restaurants = $search !== ''
-            ? $this->restaurantService->search($search)
-            : $this->restaurantService->getAll();
+        $restaurants = $search !== '' ? $this->restaurantService->search($search) : $this->restaurantService->getAll();
 
         $pageTitle = 'Restaurants';
         $currentPage = 'restaurants';
@@ -36,18 +31,14 @@ class RestaurantController
     public function store(): void
     {
         csrfCheck();
-
         $data = $this->extractFormData();
-
         $result = $this->restaurantService->create($data);
-
         if (is_array($result)) {
             setFlash('errors', $result);
             setOldInput($data);
             redirect('restaurants/create');
             return;
         }
-
         setFlash('success', 'Restaurant created successfully.');
         redirect('restaurants');
     }
@@ -56,13 +47,11 @@ class RestaurantController
     {
         $id = (int) ($_GET['id'] ?? 0);
         $restaurant = $this->restaurantService->getById($id);
-
         if (!$restaurant) {
             http_response_code(404);
             require BASE_PATH . '/views/errors/404.php';
             exit;
         }
-
         $pageTitle = 'Edit Restaurant';
         $currentPage = 'restaurants';
         $formAction = baseUrl('restaurants/update');
@@ -72,24 +61,16 @@ class RestaurantController
     public function update(): void
     {
         csrfCheck();
-
         $id = (int) ($_POST['id'] ?? 0);
-        if ($id <= 0) {
-            redirect('restaurants');
-            return;
-        }
-
+        if ($id <= 0) { redirect('restaurants'); return; }
         $data = $this->extractFormData();
-
         $result = $this->restaurantService->update($id, $data);
-
         if (is_array($result)) {
             setFlash('errors', $result);
             setOldInput($data);
             redirect('restaurants/edit?id=' . $id);
             return;
         }
-
         setFlash('success', 'Restaurant updated successfully.');
         redirect('restaurants');
     }
@@ -97,23 +78,14 @@ class RestaurantController
     public function delete(): void
     {
         csrfCheck();
-
         $id = (int) ($_POST['id'] ?? 0);
         if ($id <= 0) {
-            if (isAjax()) {
-                jsonResponse(['success' => false, 'message' => 'Invalid restaurant ID.'], 400);
-            }
+            if (isAjax()) { jsonResponse(['success' => false, 'message' => 'Invalid restaurant ID.'], 400); }
             redirect('restaurants');
             return;
         }
-
         $this->restaurantService->delete($id);
-
-        if (isAjax()) {
-            jsonResponse(['success' => true, 'message' => 'Restaurant deleted successfully.']);
-            return;
-        }
-
+        if (isAjax()) { jsonResponse(['success' => true, 'message' => 'Restaurant deleted successfully.']); return; }
         setFlash('success', 'Restaurant deleted successfully.');
         redirect('restaurants');
     }
@@ -121,13 +93,16 @@ class RestaurantController
     private function extractFormData(): array
     {
         return [
-            'name'              => trim($_POST['name'] ?? ''),
-            'legal_id'          => trim($_POST['legal_id'] ?? ''),
-            'address'           => trim($_POST['address'] ?? ''),
-            'food_type'         => trim($_POST['food_type'] ?? ''),
-            'combo_name'        => trim($_POST['combo_name'] ?? ''),
-            'combo_description' => trim($_POST['combo_description'] ?? ''),
-            'combo_price'       => trim($_POST['combo_price'] ?? ''),
+            'username'         => trim($_POST['username'] ?? ''),
+            'email'            => trim($_POST['email'] ?? ''),
+            'password'         => $_POST['password'] ?? '',
+            'password_confirm' => $_POST['password_confirm'] ?? '',
+            'document'         => trim($_POST['document'] ?? ''),
+            'address'          => trim($_POST['address'] ?? ''),
+            'city'             => trim($_POST['city'] ?? ''),
+            'postal_code'      => trim($_POST['postal_code'] ?? ''),
+            'category'         => trim($_POST['category'] ?? ''),
+            'status'           => trim($_POST['status'] ?? ''),
         ];
     }
 }

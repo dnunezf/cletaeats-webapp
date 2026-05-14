@@ -25,6 +25,7 @@ $asset = static function (string $path): string {
     <link rel="stylesheet" href="<?= $asset('css/orders.css') ?>">
     <link rel="stylesheet" href="<?= $asset('css/billing.css') ?>">
     <link rel="stylesheet" href="<?= $asset('css/reports.css') ?>">
+    <link rel="stylesheet" href="<?= $asset('css/combos.css') ?>">
     <link rel="stylesheet" href="<?= $asset('css/responsive.css') ?>">
 </head>
 <body>

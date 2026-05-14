@@ -112,39 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Customer form validation
-    const customerForm = document.getElementById('customerForm');
-    if (customerForm) {
-        customerForm.addEventListener('submit', (e) => {
-            const v = new FormValidator(customerForm);
-            const firstName = customerForm.querySelector('[name="first_name"]').value;
-            const lastName = customerForm.querySelector('[name="last_name"]').value;
-            const email = customerForm.querySelector('[name="email"]').value;
-            const phone = customerForm.querySelector('[name="phone_number"]').value;
-            const postalCode = customerForm.querySelector('[name="postal_code"]').value;
-
-            v.required(firstName, 'first_name', 'First name')
-             .minLength(firstName, 2, 'first_name', 'First name')
-             .maxLength(firstName, 50, 'first_name', 'First name')
-             .required(lastName, 'last_name', 'Last name')
-             .minLength(lastName, 2, 'last_name', 'Last name')
-             .maxLength(lastName, 50, 'last_name', 'Last name')
-             .required(email, 'email', 'Email')
-             .email(email, 'email');
-
-            if (phone) {
-                v.phone(phone, 'phone_number');
-            }
-            if (postalCode) {
-                v.maxLength(postalCode, 10, 'postal_code', 'Postal code');
-            }
-
-            if (!v.isValid()) {
-                e.preventDefault();
-                v.showErrors();
-            }
-        });
-    }
+    // Customer form: HTML5 + server-side validation are authoritative.
+    // (Field-level JS validation removed during the schema migration.)
 
     /**
      * Show a flash message dynamically.

@@ -1,63 +1,50 @@
 <?php
 
 /**
- * Order data transfer object.
+ * Order DTO — new schema. Items live in invoice_lines.
  */
 class Order
 {
     public int $id;
     public int $customerId;
-    public int $restaurantId;
-    public ?int $assignedDriverId;
-    public string $comboName;
-    public float $comboPrice;
-    public int $quantity;
-    public float $total;
+    public int $driverId;
     public string $status;
-    public ?string $notes;
-    public string $createdAt;
-    public ?string $deliveredAt;
-    public ?string $updatedAt;
+    public string $creationDate;
+    public ?string $deliveredDate;
+    public string $costumerCardNumber;
+    public string $driverCardNumber;
 
     public static function fromArray(array $data): self
     {
-        $order = new self();
-        $order->id               = (int) ($data['id'] ?? 0);
-        $order->customerId       = (int) ($data['customer_id'] ?? 0);
-        $order->restaurantId     = (int) ($data['restaurant_id'] ?? 0);
-        $order->assignedDriverId = isset($data['assigned_driver_id']) ? (int) $data['assigned_driver_id'] : null;
-        $order->comboName        = $data['combo_name'] ?? '';
-        $order->comboPrice       = (float) ($data['combo_price'] ?? 0);
-        $order->quantity         = (int) ($data['quantity'] ?? 1);
-        $order->total            = (float) ($data['total'] ?? 0);
-        $order->status           = $data['status'] ?? 'preparing';
-        $order->notes            = $data['notes'] ?? null;
-        $order->createdAt        = $data['created_at'] ?? '';
-        $order->deliveredAt      = $data['delivered_at'] ?? null;
-        $order->updatedAt        = $data['updated_at'] ?? null;
-        return $order;
+        $o = new self();
+        $o->id                  = (int) ($data['id'] ?? 0);
+        $o->customerId          = (int) ($data['customer_id'] ?? 0);
+        $o->driverId            = (int) ($data['driver_id'] ?? 0);
+        $o->status              = $data['status'] ?? 'pending';
+        $o->creationDate        = $data['creation_date'] ?? '';
+        $o->deliveredDate       = $data['delivered_date'] ?? null;
+        $o->costumerCardNumber  = $data['costumer_card_number'] ?? '';
+        $o->driverCardNumber    = $data['driver_card_number'] ?? '';
+        return $o;
     }
 
     public static function statuses(): array
     {
-        return ['preparing', 'on_the_way', 'suspended', 'delivered'];
+        return ['pending', 'ongoing', 'delivered', 'cancelled'];
     }
 
-    /**
-     * Valid next states for each status.
-     */
     public static function transitions(): array
     {
         return [
-            'preparing'  => ['on_the_way', 'suspended'],
-            'on_the_way' => ['delivered', 'suspended'],
-            'suspended'  => ['preparing'],
-            'delivered'  => [],
+            'pending'   => ['ongoing', 'cancelled'],
+            'ongoing'   => ['delivered', 'cancelled'],
+            'delivered' => [],
+            'cancelled' => [],
         ];
     }
 
     public static function displayStatus(string $status): string
     {
-        return ucfirst(str_replace('_', ' ', $status));
+        return ucfirst($status);
     }
 }

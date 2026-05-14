@@ -1,7 +1,7 @@
 <?php
 
 /**
- * SQL queries for the restaurants table.
+ * restaurants via stored procedures + joined reads.
  */
 class RestaurantRepository
 {
@@ -12,36 +12,32 @@ class RestaurantRepository
         $this->db = Database::getConnection();
     }
 
-    public function findAllActive(): array
+    private function joinedSelect(): string
     {
-        $stmt = $this->db->query(
-            'SELECT * FROM restaurants WHERE is_active = 1 ORDER BY name ASC'
-        );
+        return 'SELECT r.user_id, r.category,
+                       u.username, u.email, u.document, u.status, u.role, u.location_id,
+                       l.address, l.city, l.postal_code
+                FROM restaurants r
+                JOIN users u ON u.id = r.user_id
+                LEFT JOIN locations l ON l.id = u.location_id';
+    }
+
+    public function findAll(): array
+    {
+        $stmt = $this->db->query($this->joinedSelect() . ' ORDER BY u.username ASC');
         return $stmt->fetchAll();
     }
 
-    public function findById(int $id): ?array
+    public function findAllActive(): array
     {
-        $stmt = $this->db->prepare('SELECT * FROM restaurants WHERE id = ? AND is_active = 1 LIMIT 1');
-        $stmt->execute([$id]);
-        $row = $stmt->fetch();
-        return $row ?: null;
+        $stmt = $this->db->query($this->joinedSelect() . " WHERE u.status = 'active' ORDER BY u.username ASC");
+        return $stmt->fetchAll();
     }
 
-    public function findByLegalId(string $legalId): ?array
+    public function findById(int $userId): ?array
     {
-        $stmt = $this->db->prepare('SELECT * FROM restaurants WHERE legal_id = ? AND is_active = 1 LIMIT 1');
-        $stmt->execute([$legalId]);
-        $row = $stmt->fetch();
-        return $row ?: null;
-    }
-
-    public function findByLegalIdExcluding(string $legalId, int $excludeId): ?array
-    {
-        $stmt = $this->db->prepare(
-            'SELECT * FROM restaurants WHERE legal_id = ? AND id != ? AND is_active = 1 LIMIT 1'
-        );
-        $stmt->execute([$legalId, $excludeId]);
+        $stmt = $this->db->prepare($this->joinedSelect() . ' WHERE r.user_id = ? LIMIT 1');
+        $stmt->execute([$userId]);
         $row = $stmt->fetch();
         return $row ?: null;
     }
@@ -50,58 +46,37 @@ class RestaurantRepository
     {
         $like = '%' . $term . '%';
         $stmt = $this->db->prepare(
-            "SELECT * FROM restaurants
-             WHERE is_active = 1
-               AND (name LIKE ? OR legal_id LIKE ? OR food_type LIKE ? OR address LIKE ? OR combo_name LIKE ?)
-             ORDER BY name ASC"
+            $this->joinedSelect() .
+            ' WHERE u.username LIKE ? OR u.email LIKE ? OR u.document LIKE ? OR r.category LIKE ? OR l.city LIKE ?
+              ORDER BY u.username ASC'
         );
         $stmt->execute([$like, $like, $like, $like, $like]);
         return $stmt->fetchAll();
     }
 
-    public function create(array $data): int
+    public function create(int $userId, string $category): int
     {
-        $stmt = $this->db->prepare(
-            'INSERT INTO restaurants
-             (name, legal_id, address, food_type, combo_name, combo_description, combo_price)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
-        );
-        $stmt->execute([
-            $data['name'],
-            $data['legal_id'],
-            $data['address'],
-            $data['food_type'],
-            $data['combo_name'],
-            $data['combo_description'] ?: null,
-            (float) $data['combo_price'],
-        ]);
-        return (int) $this->db->lastInsertId();
+        $stmt = $this->db->prepare('CALL sp_create_restaurant(?, ?)');
+        $stmt->execute([$userId, $category]);
+        $stmt->closeCursor();
+        return $userId;
     }
 
-    public function update(int $id, array $data): bool
+    public function update(int $userId, string $category): bool
     {
-        $stmt = $this->db->prepare(
-            'UPDATE restaurants
-             SET name = ?, legal_id = ?, address = ?, food_type = ?,
-                 combo_name = ?, combo_description = ?, combo_price = ?
-             WHERE id = ? AND is_active = 1'
-        );
-        return $stmt->execute([
-            $data['name'],
-            $data['legal_id'],
-            $data['address'],
-            $data['food_type'],
-            $data['combo_name'],
-            $data['combo_description'] ?: null,
-            (float) $data['combo_price'],
-            $id,
-        ]);
+        $stmt = $this->db->prepare('CALL sp_update_restaurant(?, ?)');
+        $stmt->execute([$userId, $category]);
+        $row = $stmt->fetch();
+        $stmt->closeCursor();
+        return (int) ($row['rows_affected'] ?? 0) > 0;
     }
 
-    public function delete(int $id): bool
+    public function delete(int $userId): bool
     {
-        $stmt = $this->db->prepare('DELETE FROM restaurants WHERE id = ?');
-        $stmt->execute([$id]);
-        return $stmt->rowCount() > 0;
+        $stmt = $this->db->prepare('CALL sp_delete_restaurant(?)');
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch();
+        $stmt->closeCursor();
+        return (int) ($row['rows_affected'] ?? 0) > 0;
     }
 }

@@ -1,97 +1,194 @@
 <?php
 
 /**
- * Customer business logic: CRUD orchestration and validation.
+ * Customer CRUD orchestrates users + locations + customers tables in a transaction.
  */
 class CustomerService
 {
     private CustomerRepository $repo;
+    private UserRepository $userRepo;
+    private LocationRepository $locationRepo;
 
     public function __construct()
     {
-        $this->repo = new CustomerRepository();
+        $this->repo         = new CustomerRepository();
+        $this->userRepo     = new UserRepository();
+        $this->locationRepo = new LocationRepository();
     }
 
     public function getAll(): array
     {
+        return $this->repo->findAll();
+    }
+
+    public function getActive(): array
+    {
         return $this->repo->findAllActive();
     }
 
-    public function getById(int $id): ?array
+    public function getById(int $userId): ?array
     {
-        return $this->repo->findById($id);
+        return $this->repo->findById($userId);
     }
 
     public function search(string $term): array
     {
         $term = trim($term);
-        if ($term === '') {
-            return $this->getAll();
-        }
-        return $this->repo->search($term);
+        return $term === '' ? $this->getAll() : $this->repo->search($term);
     }
 
-    /**
-     * Create a customer. Returns the new ID on success or error array on failure.
-     */
     public function create(array $data): int|array
     {
-        $errors = $this->validate($data);
+        $errors = $this->validate($data, isCreate: true);
+        if (!empty($errors)) {
+            return $errors;
+        }
+        if ($this->userRepo->findByUsername($data['username'])) {
+            return ['username' => 'This username is already taken.'];
+        }
+        if ($this->userRepo->findByEmail($data['email'])) {
+            return ['email' => 'This email is already registered.'];
+        }
+        if ($this->userRepo->findByDocument($data['document'], 'customer')) {
+            return ['document' => 'This document is already registered.'];
+        }
+
+        $pdo = Database::getConnection();
+        $pdo->beginTransaction();
+        try {
+            $locationId = $this->locationRepo->create([
+                'address'     => $data['address'],
+                'city'        => $data['city'],
+                'postal_code' => $data['postal_code'],
+            ]);
+
+            $hash = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
+            $userId = $this->userRepo->create([
+                'username'      => trim($data['username']),
+                'email'         => trim($data['email']),
+                'password_hash' => $hash,
+                'role'          => 'customer',
+                'document'      => trim($data['document']),
+                'location_id'   => $locationId,
+            ]);
+
+            // Admin-created customers are active by default.
+            $this->userRepo->updateStatus($userId, 'active');
+
+            $this->repo->create($userId, $data['card_number']);
+
+            $pdo->commit();
+            return $userId;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            return ['general' => 'Unable to create customer: ' . $e->getMessage()];
+        }
+    }
+
+    public function update(int $userId, array $data): bool|array
+    {
+        $existing = $this->repo->findById($userId);
+        if (!$existing) {
+            return ['general' => 'Customer not found.'];
+        }
+
+        $errors = $this->validate($data, isCreate: false);
         if (!empty($errors)) {
             return $errors;
         }
 
-        if ($data['email'] && $this->repo->findByEmail($data['email'])) {
-            return ['email' => 'This email is already registered to another customer.'];
+        if ($this->userRepo->findByUsernameExcluding($data['username'], $userId)) {
+            return ['username' => 'This username is already taken.'];
+        }
+        if ($this->userRepo->findByEmailExcluding($data['email'], $userId)) {
+            return ['email' => 'This email is already registered.'];
+        }
+        if ($this->userRepo->findByDocumentExcluding($data['document'], 'customer', $userId)) {
+            return ['document' => 'This document is already registered.'];
         }
 
-        return $this->repo->create($data);
+        $pdo = Database::getConnection();
+        $pdo->beginTransaction();
+        try {
+            $locationId = (int) $existing['location_id'];
+            $this->locationRepo->update($locationId, [
+                'address'     => $data['address'],
+                'city'        => $data['city'],
+                'postal_code' => $data['postal_code'],
+            ]);
+
+            $this->userRepo->update($userId, [
+                'username'      => trim($data['username']),
+                'email'         => trim($data['email']),
+                'password_hash' => $existing['password_hash'] ?? '',
+                'role'          => 'customer',
+                'status'        => $data['status'] ?? $existing['status'],
+                'document'      => trim($data['document']),
+                'location_id'   => $locationId,
+            ]);
+
+            if (!empty($data['password'])) {
+                $hash = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
+                $this->userRepo->updatePassword($userId, $hash);
+            }
+
+            $this->repo->update($userId, $data['card_number']);
+
+            $pdo->commit();
+            return true;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            return ['general' => 'Unable to update customer: ' . $e->getMessage()];
+        }
     }
 
-    /**
-     * Update a customer. Returns true on success or error array on failure.
-     */
-    public function update(int $id, array $data): bool|array
+    public function delete(int $userId): bool
     {
-        $errors = $this->validate($data);
-        if (!empty($errors)) {
-            return $errors;
+        $pdo = Database::getConnection();
+        $pdo->beginTransaction();
+        try {
+            $this->repo->delete($userId);
+            $this->userRepo->delete($userId);
+            $pdo->commit();
+            return true;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            return false;
         }
-
-        if ($data['email'] && $this->repo->findByEmailExcluding($data['email'], $id)) {
-            return ['email' => 'This email is already registered to another customer.'];
-        }
-
-        return $this->repo->update($id, $data);
     }
 
-    public function delete(int $id): bool
+    private function validate(array $data, bool $isCreate): array
     {
-        return $this->repo->delete($id);
-    }
+        $v = new Validator();
+        $v->required($data['username'] ?? '', 'username')
+          ->alphanumeric($data['username'] ?? '', 'username')
+          ->minLength($data['username'] ?? '', 3, 'username')
+          ->maxLength($data['username'] ?? '', 255, 'username')
+          ->required($data['email'] ?? '', 'email')
+          ->email($data['email'] ?? '', 'email')
+          ->maxLength($data['email'] ?? '', 255, 'email')
+          ->required($data['document'] ?? '', 'document')
+          ->maxLength($data['document'] ?? '', 255, 'document')
+          ->required($data['address'] ?? '', 'address')
+          ->required($data['city'] ?? '', 'city')
+          ->required($data['postal_code'] ?? '', 'postal_code')
+          ->required($data['card_number'] ?? '', 'card_number');
 
-    private function validate(array $data): array
-    {
-        $validator = new Validator();
-        $validator
-            ->required($data['first_name'] ?? '', 'first_name')
-            ->minLength($data['first_name'] ?? '', 2, 'first_name')
-            ->maxLength($data['first_name'] ?? '', 50, 'first_name')
-            ->required($data['last_name'] ?? '', 'last_name')
-            ->minLength($data['last_name'] ?? '', 2, 'last_name')
-            ->maxLength($data['last_name'] ?? '', 50, 'last_name')
-            ->required($data['email'] ?? '', 'email')
-            ->email($data['email'] ?? '', 'email')
-            ->maxLength($data['email'] ?? '', 100, 'email');
-
-        if (!empty($data['phone_number'])) {
-            $validator->phone($data['phone_number'], 'phone_number');
+        if ($isCreate) {
+            $v->required($data['password'] ?? '', 'password')
+              ->minLength($data['password'] ?? '', 8, 'password')
+              ->matches($data['password'] ?? '', $data['password_confirm'] ?? '', 'password');
+        } elseif (!empty($data['password'])) {
+            $v->minLength($data['password'], 8, 'password')
+              ->matches($data['password'], $data['password_confirm'] ?? '', 'password');
         }
 
-        if (!empty($data['postal_code'])) {
-            $validator->maxLength($data['postal_code'], 10, 'postal_code');
+        $errors = $v->isValid() ? [] : $v->getFirstErrors();
+
+        if (!isset($errors['card_number']) && !preg_match('/^\d{13,19}$/', $data['card_number'] ?? '')) {
+            $errors['card_number'] = 'Card number must contain 13 to 19 digits.';
         }
 
-        return $validator->isValid() ? [] : $validator->getFirstErrors();
+        return $errors;
     }
 }

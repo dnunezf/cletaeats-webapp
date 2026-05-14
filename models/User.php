@@ -1,7 +1,7 @@
 <?php
 
 /**
- * User data transfer object.
+ * User data transfer object — new schema (users + locations).
  */
 class User
 {
@@ -10,10 +10,9 @@ class User
     public string $email;
     public string $passwordHash;
     public string $role;
-    public bool $isActive;
     public string $status;
-    public string $createdAt;
-    public string $updatedAt;
+    public string $document;
+    public int $locationId;
 
     public static function fromArray(array $data): self
     {
@@ -22,11 +21,10 @@ class User
         $user->username     = $data['username'] ?? '';
         $user->email        = $data['email'] ?? '';
         $user->passwordHash = $data['password_hash'] ?? '';
-        $user->role         = $data['role'] ?? 'user';
-        $user->isActive     = (bool) ($data['is_active'] ?? true);
-        $user->status       = $data['status'] ?? 'active';
-        $user->createdAt    = $data['created_at'] ?? '';
-        $user->updatedAt    = $data['updated_at'] ?? '';
+        $user->role         = $data['role'] ?? 'customer';
+        $user->status       = $data['status'] ?? 'inactive';
+        $user->document     = $data['document'] ?? '';
+        $user->locationId   = (int) ($data['location_id'] ?? 0);
         return $user;
     }
 
@@ -35,8 +33,23 @@ class User
         return $this->role === 'admin';
     }
 
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
     public function isPending(): bool
     {
-        return $this->status === 'pending';
+        return $this->status === 'inactive';
+    }
+
+    public static function roles(): array
+    {
+        return ['customer', 'driver', 'restaurant', 'admin'];
+    }
+
+    public static function statuses(): array
+    {
+        return ['inactive', 'active'];
     }
 }

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * SQL queries for the delivery_drivers table.
+ * drivers via stored procedures + joined reads.
  */
 class DeliveryDriverRepository
 {
@@ -12,36 +12,33 @@ class DeliveryDriverRepository
         $this->db = Database::getConnection();
     }
 
-    public function findAllActive(): array
+    private function joinedSelect(): string
     {
-        $stmt = $this->db->query(
-            'SELECT * FROM delivery_drivers WHERE is_active = 1 ORDER BY full_name ASC'
-        );
+        return "SELECT d.user_id, d.status, d.penalties, d.card_number,
+                       d.km_cost_regular, d.km_cost_holidays,
+                       u.username, u.email, u.document, u.status AS user_status, u.role, u.location_id,
+                       l.address, l.city, l.postal_code
+                FROM drivers d
+                JOIN users u ON u.id = d.user_id
+                LEFT JOIN locations l ON l.id = u.location_id";
+    }
+
+    public function findAll(): array
+    {
+        $stmt = $this->db->query($this->joinedSelect() . ' ORDER BY u.username ASC');
         return $stmt->fetchAll();
     }
 
-    public function findById(int $id): ?array
+    public function findAllActive(): array
     {
-        $stmt = $this->db->prepare('SELECT * FROM delivery_drivers WHERE id = ? AND is_active = 1 LIMIT 1');
-        $stmt->execute([$id]);
-        $row = $stmt->fetch();
-        return $row ?: null;
+        $stmt = $this->db->query($this->joinedSelect() . " WHERE u.status = 'active' ORDER BY u.username ASC");
+        return $stmt->fetchAll();
     }
 
-    public function findByIdNumber(string $idNumber): ?array
+    public function findById(int $userId): ?array
     {
-        $stmt = $this->db->prepare('SELECT * FROM delivery_drivers WHERE id_number = ? AND is_active = 1 LIMIT 1');
-        $stmt->execute([$idNumber]);
-        $row = $stmt->fetch();
-        return $row ?: null;
-    }
-
-    public function findByIdNumberExcluding(string $idNumber, int $excludeId): ?array
-    {
-        $stmt = $this->db->prepare(
-            'SELECT * FROM delivery_drivers WHERE id_number = ? AND id != ? AND is_active = 1 LIMIT 1'
-        );
-        $stmt->execute([$idNumber, $excludeId]);
+        $stmt = $this->db->prepare($this->joinedSelect() . ' WHERE d.user_id = ? LIMIT 1');
+        $stmt->execute([$userId]);
         $row = $stmt->fetch();
         return $row ?: null;
     }
@@ -50,74 +47,63 @@ class DeliveryDriverRepository
     {
         $like = '%' . $term . '%';
         $stmt = $this->db->prepare(
-            "SELECT * FROM delivery_drivers
-             WHERE is_active = 1
-               AND (full_name LIKE ? OR id_number LIKE ? OR phone LIKE ? OR email LIKE ? OR address LIKE ?)
-             ORDER BY full_name ASC"
+            $this->joinedSelect() .
+            ' WHERE u.username LIKE ? OR u.email LIKE ? OR u.document LIKE ? OR d.card_number LIKE ? OR l.city LIKE ?
+              ORDER BY u.username ASC'
         );
         $stmt->execute([$like, $like, $like, $like, $like]);
         return $stmt->fetchAll();
     }
 
-    public function create(array $data): int
+    public function create(int $userId, string $cardNumber, float $kmCostRegular, float $kmCostHolidays): int
     {
-        $stmt = $this->db->prepare(
-            'INSERT INTO delivery_drivers
-             (full_name, id_number, email, address, phone, card_number, status,
-              order_distance, daily_kilometers, weekday_cost_per_km, holiday_cost_per_km,
-              warning_count, complaints)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
-        $stmt->execute([
-            $data['full_name'],
-            $data['id_number'],
-            $data['email'],
-            $data['address'],
-            $data['phone'],
-            $data['card_number'],
-            $data['status'],
-            (float) $data['order_distance'],
-            (float) $data['daily_kilometers'],
-            (float) $data['weekday_cost_per_km'],
-            (float) $data['holiday_cost_per_km'],
-            (int) $data['warning_count'],
-            $data['complaints'] !== '' ? $data['complaints'] : null,
-        ]);
-        return (int) $this->db->lastInsertId();
+        $stmt = $this->db->prepare('CALL sp_create_driver(?, ?, ?, ?)');
+        $stmt->execute([$userId, $cardNumber, $kmCostRegular, $kmCostHolidays]);
+        $stmt->closeCursor();
+        return $userId;
     }
 
-    public function update(int $id, array $data): bool
+    public function update(int $userId, string $status, int $penalties, string $cardNumber, float $kmCostRegular, float $kmCostHolidays): bool
     {
-        $stmt = $this->db->prepare(
-            'UPDATE delivery_drivers
-             SET full_name = ?, id_number = ?, email = ?, address = ?, phone = ?,
-                 card_number = ?, status = ?, order_distance = ?, daily_kilometers = ?,
-                 weekday_cost_per_km = ?, holiday_cost_per_km = ?, warning_count = ?,
-                 complaints = ?
-             WHERE id = ? AND is_active = 1'
-        );
-        return $stmt->execute([
-            $data['full_name'],
-            $data['id_number'],
-            $data['email'],
-            $data['address'],
-            $data['phone'],
-            $data['card_number'],
-            $data['status'],
-            (float) $data['order_distance'],
-            (float) $data['daily_kilometers'],
-            (float) $data['weekday_cost_per_km'],
-            (float) $data['holiday_cost_per_km'],
-            (int) $data['warning_count'],
-            $data['complaints'] !== '' ? $data['complaints'] : null,
-            $id,
-        ]);
+        $stmt = $this->db->prepare('CALL sp_update_driver(?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$userId, $status, $penalties, $cardNumber, $kmCostRegular, $kmCostHolidays]);
+        $row = $stmt->fetch();
+        $stmt->closeCursor();
+        return (int) ($row['rows_affected'] ?? 0) > 0;
     }
 
-    public function delete(int $id): bool
+    public function updateAvailability(int $userId, string $status): bool
     {
-        $stmt = $this->db->prepare('DELETE FROM delivery_drivers WHERE id = ?');
-        $stmt->execute([$id]);
-        return $stmt->rowCount() > 0;
+        $stmt = $this->db->prepare('UPDATE drivers SET status = ? WHERE user_id = ?');
+        return $stmt->execute([$status, $userId]);
+    }
+
+    public function delete(int $userId): bool
+    {
+        $stmt = $this->db->prepare('CALL sp_delete_driver(?)');
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch();
+        $stmt->closeCursor();
+        return (int) ($row['rows_affected'] ?? 0) > 0;
+    }
+
+    public function findFirstAvailableDriverId(): ?int
+    {
+        $stmt = $this->db->query(
+            "SELECT d.user_id
+             FROM drivers d
+             JOIN users u ON u.id = d.user_id
+             WHERE u.status = 'active' AND d.status = 'available' AND d.penalties < 4
+             ORDER BY d.user_id ASC LIMIT 1"
+        );
+        $row = $stmt->fetch();
+        return $row ? (int) $row['user_id'] : null;
+    }
+
+    public function hasOngoingOrders(int $driverUserId): bool
+    {
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM orders WHERE driver_id = ? AND status IN ('pending','ongoing')");
+        $stmt->execute([$driverUserId]);
+        return (int) $stmt->fetchColumn() > 0;
     }
 }

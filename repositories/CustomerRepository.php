@@ -1,7 +1,7 @@
 <?php
 
 /**
- * SQL queries for the customers table.
+ * customers via stored procedures + joined reads against users/locations.
  */
 class CustomerRepository
 {
@@ -12,26 +12,32 @@ class CustomerRepository
         $this->db = Database::getConnection();
     }
 
-    public function findAllActive(): array
+    private function joinedSelect(): string
     {
-        $stmt = $this->db->query(
-            'SELECT * FROM customers WHERE is_active = 1 ORDER BY first_name ASC, last_name ASC'
-        );
+        return 'SELECT c.user_id, c.card_number,
+                       u.username, u.email, u.document, u.status, u.role, u.location_id,
+                       l.address, l.city, l.postal_code
+                FROM customers c
+                JOIN users u ON u.id = c.user_id
+                LEFT JOIN locations l ON l.id = u.location_id';
+    }
+
+    public function findAll(): array
+    {
+        $stmt = $this->db->query($this->joinedSelect() . ' ORDER BY u.username ASC');
         return $stmt->fetchAll();
     }
 
-    public function findById(int $id): ?array
+    public function findAllActive(): array
     {
-        $stmt = $this->db->prepare('SELECT * FROM customers WHERE id = ? AND is_active = 1 LIMIT 1');
-        $stmt->execute([$id]);
-        $row = $stmt->fetch();
-        return $row ?: null;
+        $stmt = $this->db->query($this->joinedSelect() . " WHERE u.status = 'active' ORDER BY u.username ASC");
+        return $stmt->fetchAll();
     }
 
-    public function findByEmail(string $email): ?array
+    public function findById(int $userId): ?array
     {
-        $stmt = $this->db->prepare('SELECT * FROM customers WHERE email = ? AND is_active = 1 LIMIT 1');
-        $stmt->execute([$email]);
+        $stmt = $this->db->prepare($this->joinedSelect() . ' WHERE c.user_id = ? LIMIT 1');
+        $stmt->execute([$userId]);
         $row = $stmt->fetch();
         return $row ?: null;
     }
@@ -40,66 +46,37 @@ class CustomerRepository
     {
         $like = '%' . $term . '%';
         $stmt = $this->db->prepare(
-            "SELECT * FROM customers
-             WHERE is_active = 1
-               AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone_number LIKE ? OR city LIKE ?)
-             ORDER BY first_name ASC, last_name ASC"
+            $this->joinedSelect() .
+            ' WHERE u.username LIKE ? OR u.email LIKE ? OR u.document LIKE ? OR c.card_number LIKE ? OR l.city LIKE ?
+              ORDER BY u.username ASC'
         );
         $stmt->execute([$like, $like, $like, $like, $like]);
         return $stmt->fetchAll();
     }
 
-    public function create(array $data): int
+    public function create(int $userId, string $cardNumber): int
     {
-        $stmt = $this->db->prepare(
-            'INSERT INTO customers (first_name, last_name, email, phone_number, address, city, postal_code)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
-        );
-        $stmt->execute([
-            $data['first_name'],
-            $data['last_name'],
-            $data['email'],
-            $data['phone_number'] ?: null,
-            $data['address'] ?: null,
-            $data['city'] ?: null,
-            $data['postal_code'] ?: null,
-        ]);
-        return (int) $this->db->lastInsertId();
+        $stmt = $this->db->prepare('CALL sp_create_customer(?, ?)');
+        $stmt->execute([$userId, $cardNumber]);
+        $stmt->closeCursor();
+        return $userId;
     }
 
-    public function update(int $id, array $data): bool
+    public function update(int $userId, string $cardNumber): bool
     {
-        $stmt = $this->db->prepare(
-            'UPDATE customers
-             SET first_name = ?, last_name = ?, email = ?, phone_number = ?, address = ?, city = ?, postal_code = ?
-             WHERE id = ? AND is_active = 1'
-        );
-        return $stmt->execute([
-            $data['first_name'],
-            $data['last_name'],
-            $data['email'],
-            $data['phone_number'] ?: null,
-            $data['address'] ?: null,
-            $data['city'] ?: null,
-            $data['postal_code'] ?: null,
-            $id,
-        ]);
-    }
-
-    public function delete(int $id): bool
-    {
-        $stmt = $this->db->prepare('DELETE FROM customers WHERE id = ?');
-        $stmt->execute([$id]);
-        return $stmt->rowCount() > 0;
-    }
-
-    public function findByEmailExcluding(string $email, int $excludeId): ?array
-    {
-        $stmt = $this->db->prepare(
-            'SELECT * FROM customers WHERE email = ? AND id != ? AND is_active = 1 LIMIT 1'
-        );
-        $stmt->execute([$email, $excludeId]);
+        $stmt = $this->db->prepare('CALL sp_update_customer(?, ?)');
+        $stmt->execute([$userId, $cardNumber]);
         $row = $stmt->fetch();
-        return $row ?: null;
+        $stmt->closeCursor();
+        return (int) ($row['rows_affected'] ?? 0) > 0;
+    }
+
+    public function delete(int $userId): bool
+    {
+        $stmt = $this->db->prepare('CALL sp_delete_customer(?)');
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch();
+        $stmt->closeCursor();
+        return (int) ($row['rows_affected'] ?? 0) > 0;
     }
 }

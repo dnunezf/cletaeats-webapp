@@ -140,11 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     if (data.delivered_at) {
-                        const dt = new Date(data.delivered_at.replace(' ', 'T'));
+                        const dt = new Date(data.delivered_at + 'T00:00:00');
                         const label = 'Delivered ' + dt.toLocaleDateString('en-US', {
                             month: 'long', day: 'numeric', year: 'numeric'
-                        }) + ' at ' + dt.toLocaleTimeString('en-US', {
-                            hour: 'numeric', minute: '2-digit'
                         });
                         let deliveredEl = document.querySelector('.order-detail-delivered-at');
                         if (deliveredEl) {

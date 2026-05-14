@@ -1,55 +1,37 @@
 <?php
 
 /**
- * Restaurant data transfer object.
+ * Restaurant DTO — user-rooted (users.id == restaurants.user_id).
  */
 class Restaurant
 {
-    public int $id;
-    public string $name;
-    public string $legalId;
+    public int $userId;
+    public string $category;
+    public string $username;
+    public string $email;
+    public string $document;
+    public string $status;
     public string $address;
-    public string $foodType;
-    public string $comboName;
-    public ?string $comboDescription;
-    public float $comboPrice;
-    public bool $isActive;
-    public string $createdAt;
-    public string $updatedAt;
+    public string $city;
+    public string $postalCode;
 
     public static function fromArray(array $data): self
     {
-        $restaurant = new self();
-        $restaurant->id               = (int) ($data['id'] ?? 0);
-        $restaurant->name             = $data['name'] ?? '';
-        $restaurant->legalId          = $data['legal_id'] ?? '';
-        $restaurant->address          = $data['address'] ?? '';
-        $restaurant->foodType         = $data['food_type'] ?? '';
-        $restaurant->comboName        = $data['combo_name'] ?? '';
-        $restaurant->comboDescription = $data['combo_description'] ?? null;
-        $restaurant->comboPrice       = (float) ($data['combo_price'] ?? 0);
-        $restaurant->isActive         = (bool) ($data['is_active'] ?? true);
-        $restaurant->createdAt        = $data['created_at'] ?? '';
-        $restaurant->updatedAt        = $data['updated_at'] ?? '';
-        return $restaurant;
+        $r = new self();
+        $r->userId     = (int) ($data['user_id'] ?? 0);
+        $r->category   = $data['category'] ?? 'typical';
+        $r->username   = $data['username'] ?? '';
+        $r->email      = $data['email'] ?? '';
+        $r->document   = $data['document'] ?? '';
+        $r->status     = $data['status'] ?? 'inactive';
+        $r->address    = $data['address'] ?? '';
+        $r->city       = $data['city'] ?? '';
+        $r->postalCode = $data['postal_code'] ?? '';
+        return $r;
     }
 
-    /**
-     * Allowed cuisine categories for the food_type field.
-     */
-    public static function foodTypes(): array
+    public static function categories(): array
     {
-        return [
-            'Italian',
-            'Mexican',
-            'Chinese',
-            'Japanese',
-            'Indian',
-            'Mediterranean',
-            'American',
-            'Fast Food',
-            'Vegetarian',
-            'Other',
-        ];
+        return ['typical', 'chinese', 'italian', 'healthy'];
     }
 }

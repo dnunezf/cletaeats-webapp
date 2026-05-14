@@ -1,131 +1,190 @@
 <?php
 
 /**
- * Restaurant business logic: CRUD orchestration and validation.
+ * Restaurant CRUD orchestrates users + locations + restaurants tables.
  */
 class RestaurantService
 {
     private RestaurantRepository $repo;
+    private UserRepository $userRepo;
+    private LocationRepository $locationRepo;
 
     public function __construct()
     {
-        $this->repo = new RestaurantRepository();
+        $this->repo         = new RestaurantRepository();
+        $this->userRepo     = new UserRepository();
+        $this->locationRepo = new LocationRepository();
     }
 
     public function getAll(): array
     {
+        return $this->repo->findAll();
+    }
+
+    public function getActive(): array
+    {
         return $this->repo->findAllActive();
     }
 
-    public function getById(int $id): ?array
+    public function getById(int $userId): ?array
     {
-        return $this->repo->findById($id);
+        return $this->repo->findById($userId);
     }
 
     public function search(string $term): array
     {
         $term = trim($term);
-        if ($term === '') {
-            return $this->getAll();
-        }
-        return $this->repo->search($term);
+        return $term === '' ? $this->getAll() : $this->repo->search($term);
     }
 
-    /**
-     * Create a restaurant. Returns the new ID on success or error array on failure.
-     */
     public function create(array $data): int|array
     {
-        $errors = $this->validate($data);
+        $errors = $this->validate($data, isCreate: true);
+        if (!empty($errors)) {
+            return $errors;
+        }
+        if ($this->userRepo->findByUsername($data['username'])) {
+            return ['username' => 'This username is already taken.'];
+        }
+        if ($this->userRepo->findByEmail($data['email'])) {
+            return ['email' => 'This email is already registered.'];
+        }
+        if ($this->userRepo->findByDocument($data['document'], 'restaurant')) {
+            return ['document' => 'This document is already registered.'];
+        }
+
+        $pdo = Database::getConnection();
+        $pdo->beginTransaction();
+        try {
+            $locationId = $this->locationRepo->create([
+                'address'     => $data['address'],
+                'city'        => $data['city'],
+                'postal_code' => $data['postal_code'],
+            ]);
+
+            $hash = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
+            $userId = $this->userRepo->create([
+                'username'      => trim($data['username']),
+                'email'         => trim($data['email']),
+                'password_hash' => $hash,
+                'role'          => 'restaurant',
+                'document'      => trim($data['document']),
+                'location_id'   => $locationId,
+            ]);
+
+            $this->userRepo->updateStatus($userId, 'active');
+            $this->repo->create($userId, $data['category']);
+
+            $pdo->commit();
+            return $userId;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            return ['general' => 'Unable to create restaurant: ' . $e->getMessage()];
+        }
+    }
+
+    public function update(int $userId, array $data): bool|array
+    {
+        $existing = $this->repo->findById($userId);
+        if (!$existing) {
+            return ['general' => 'Restaurant not found.'];
+        }
+        $errors = $this->validate($data, isCreate: false);
         if (!empty($errors)) {
             return $errors;
         }
 
-        if ($this->repo->findByLegalId($data['legal_id'])) {
-            return ['legal_id' => 'This legal ID is already registered to another restaurant.'];
+        if ($this->userRepo->findByUsernameExcluding($data['username'], $userId)) {
+            return ['username' => 'This username is already taken.'];
+        }
+        if ($this->userRepo->findByEmailExcluding($data['email'], $userId)) {
+            return ['email' => 'This email is already registered.'];
+        }
+        if ($this->userRepo->findByDocumentExcluding($data['document'], 'restaurant', $userId)) {
+            return ['document' => 'This document is already registered.'];
         }
 
-        return $this->repo->create($data);
+        $pdo = Database::getConnection();
+        $pdo->beginTransaction();
+        try {
+            $locationId = (int) $existing['location_id'];
+            $this->locationRepo->update($locationId, [
+                'address'     => $data['address'],
+                'city'        => $data['city'],
+                'postal_code' => $data['postal_code'],
+            ]);
+
+            $this->userRepo->update($userId, [
+                'username'      => trim($data['username']),
+                'email'         => trim($data['email']),
+                'password_hash' => $existing['password_hash'] ?? '',
+                'role'          => 'restaurant',
+                'status'        => $data['status'] ?? $existing['status'],
+                'document'      => trim($data['document']),
+                'location_id'   => $locationId,
+            ]);
+
+            if (!empty($data['password'])) {
+                $hash = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
+                $this->userRepo->updatePassword($userId, $hash);
+            }
+
+            $this->repo->update($userId, $data['category']);
+
+            $pdo->commit();
+            return true;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            return ['general' => 'Unable to update restaurant: ' . $e->getMessage()];
+        }
     }
 
-    /**
-     * Update a restaurant. Returns true on success or error array on failure.
-     */
-    public function update(int $id, array $data): bool|array
+    public function delete(int $userId): bool
     {
-        $errors = $this->validate($data);
-        if (!empty($errors)) {
-            return $errors;
+        $pdo = Database::getConnection();
+        $pdo->beginTransaction();
+        try {
+            $this->repo->delete($userId);
+            $this->userRepo->delete($userId);
+            $pdo->commit();
+            return true;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            return false;
         }
-
-        if ($this->repo->findByLegalIdExcluding($data['legal_id'], $id)) {
-            return ['legal_id' => 'This legal ID is already registered to another restaurant.'];
-        }
-
-        return $this->repo->update($id, $data);
     }
 
-    public function delete(int $id): bool
+    private function validate(array $data, bool $isCreate): array
     {
-        return $this->repo->delete($id);
-    }
+        $v = new Validator();
+        $v->required($data['username'] ?? '', 'username')
+          ->alphanumeric($data['username'] ?? '', 'username')
+          ->minLength($data['username'] ?? '', 3, 'username')
+          ->maxLength($data['username'] ?? '', 255, 'username')
+          ->required($data['email'] ?? '', 'email')
+          ->email($data['email'] ?? '', 'email')
+          ->maxLength($data['email'] ?? '', 255, 'email')
+          ->required($data['document'] ?? '', 'document')
+          ->maxLength($data['document'] ?? '', 255, 'document')
+          ->required($data['address'] ?? '', 'address')
+          ->required($data['city'] ?? '', 'city')
+          ->required($data['postal_code'] ?? '', 'postal_code')
+          ->required($data['category'] ?? '', 'category');
 
-    private function validate(array $data): array
-    {
-        $validator = new Validator();
-        $validator
-            ->required($data['name'] ?? '', 'name')
-            ->minLength($data['name'] ?? '', 2, 'name')
-            ->maxLength($data['name'] ?? '', 100, 'name')
-            ->required($data['legal_id'] ?? '', 'legal_id')
-            ->minLength($data['legal_id'] ?? '', 5, 'legal_id')
-            ->maxLength($data['legal_id'] ?? '', 30, 'legal_id')
-            ->required($data['address'] ?? '', 'address')
-            ->maxLength($data['address'] ?? '', 255, 'address')
-            ->required($data['food_type'] ?? '', 'food_type')
-            ->maxLength($data['food_type'] ?? '', 50, 'food_type')
-            ->required($data['combo_name'] ?? '', 'combo_name')
-            ->minLength($data['combo_name'] ?? '', 2, 'combo_name')
-            ->maxLength($data['combo_name'] ?? '', 100, 'combo_name');
-
-        if (!empty($data['combo_description'])) {
-            $validator->maxLength($data['combo_description'], 255, 'combo_description');
+        if ($isCreate) {
+            $v->required($data['password'] ?? '', 'password')
+              ->minLength($data['password'] ?? '', 8, 'password')
+              ->matches($data['password'] ?? '', $data['password_confirm'] ?? '', 'password');
+        } elseif (!empty($data['password'])) {
+            $v->minLength($data['password'], 8, 'password')
+              ->matches($data['password'], $data['password_confirm'] ?? '', 'password');
         }
 
-        $errors = $validator->isValid() ? [] : $validator->getFirstErrors();
+        $errors = $v->isValid() ? [] : $v->getFirstErrors();
 
-        if (!isset($errors['food_type']) && !$this->isAllowedFoodType($data['food_type'] ?? '')) {
-            $errors['food_type'] = 'Please select a valid food type.';
+        if (!isset($errors['category']) && !in_array($data['category'] ?? '', Restaurant::categories(), true)) {
+            $errors['category'] = 'Please select a valid category.';
         }
-
-        $priceError = $this->validateComboPrice($data['combo_price'] ?? '');
-        if ($priceError !== null && !isset($errors['combo_price'])) {
-            $errors['combo_price'] = $priceError;
-        }
-
         return $errors;
-    }
-
-    private function isAllowedFoodType(string $value): bool
-    {
-        return in_array($value, Restaurant::foodTypes(), true);
-    }
-
-    private function validateComboPrice(string $value): ?string
-    {
-        if (trim($value) === '') {
-            return 'Combo price is required.';
-        }
-        if (!is_numeric($value)) {
-            return 'Combo price must be a valid number.';
-        }
-        $price = (float) $value;
-        if ($price < 0) {
-            return 'Combo price cannot be negative.';
-        }
-        if ($price > 999999.99) {
-            return 'Combo price must not exceed 999999.99.';
-        }
-        return null;
     }
 }

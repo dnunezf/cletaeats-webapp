@@ -1,56 +1,46 @@
 <?php
 
 /**
- * Delivery driver data transfer object.
+ * Delivery driver DTO — user-rooted (users.id == drivers.user_id).
+ * Class name kept as DeliveryDriver to minimise touch surface in controllers/services.
  */
 class DeliveryDriver
 {
-    public int $id;
-    public string $fullName;
-    public string $idNumber;
-    public string $email;
-    public string $address;
-    public string $phone;
-    public string $cardNumber;
+    public int $userId;
     public string $status;
-    public float $orderDistance;
-    public float $dailyKilometers;
-    public float $weekdayCostPerKm;
-    public float $holidayCostPerKm;
-    public int $warningCount;
-    public ?string $complaints;
-    public bool $isActive;
-    public string $createdAt;
-    public string $updatedAt;
+    public int $penalties;
+    public string $cardNumber;
+    public float $kmCostRegular;
+    public float $kmCostHolidays;
+    public string $username;
+    public string $email;
+    public string $document;
+    public string $userStatus;
+    public string $address;
+    public string $city;
+    public string $postalCode;
 
     public static function fromArray(array $data): self
     {
-        $driver = new self();
-        $driver->id               = (int) ($data['id'] ?? 0);
-        $driver->fullName         = $data['full_name'] ?? '';
-        $driver->idNumber         = $data['id_number'] ?? '';
-        $driver->email            = $data['email'] ?? '';
-        $driver->address          = $data['address'] ?? '';
-        $driver->phone            = $data['phone'] ?? '';
-        $driver->cardNumber       = $data['card_number'] ?? '';
-        $driver->status           = $data['status'] ?? 'available';
-        $driver->orderDistance    = (float) ($data['order_distance'] ?? 0);
-        $driver->dailyKilometers  = (float) ($data['daily_kilometers'] ?? 0);
-        $driver->weekdayCostPerKm = (float) ($data['weekday_cost_per_km'] ?? 0);
-        $driver->holidayCostPerKm = (float) ($data['holiday_cost_per_km'] ?? 0);
-        $driver->warningCount     = (int) ($data['warning_count'] ?? 0);
-        $driver->complaints       = $data['complaints'] ?? null;
-        $driver->isActive         = (bool) ($data['is_active'] ?? true);
-        $driver->createdAt        = $data['created_at'] ?? '';
-        $driver->updatedAt        = $data['updated_at'] ?? '';
-        return $driver;
+        $d = new self();
+        $d->userId         = (int) ($data['user_id'] ?? 0);
+        $d->status         = $data['status'] ?? 'available';
+        $d->penalties      = (int) ($data['penalties'] ?? 0);
+        $d->cardNumber     = $data['card_number'] ?? '';
+        $d->kmCostRegular  = (float) ($data['km_cost_regular'] ?? 0);
+        $d->kmCostHolidays = (float) ($data['km_cost_holidays'] ?? 0);
+        $d->username       = $data['username'] ?? '';
+        $d->email          = $data['email'] ?? '';
+        $d->document       = $data['document'] ?? '';
+        $d->userStatus     = $data['user_status'] ?? ($data['status'] ?? '');
+        $d->address        = $data['address'] ?? '';
+        $d->city           = $data['city'] ?? '';
+        $d->postalCode     = $data['postal_code'] ?? '';
+        return $d;
     }
 
-    /**
-     * Allowed availability statuses.
-     */
     public static function statuses(): array
     {
-        return ['available', 'busy'];
+        return ['available', 'occupied'];
     }
 }

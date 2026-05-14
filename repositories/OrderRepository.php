@@ -1,7 +1,7 @@
 <?php
 
 /**
- * SQL queries for the orders table.
+ * orders + invoice_lines via stored procedures + joined reads.
  */
 class OrderRepository
 {
@@ -12,45 +12,48 @@ class OrderRepository
         $this->db = Database::getConnection();
     }
 
+    private function listSelect(): string
+    {
+        // Restaurant derived via first invoice_line → combo → restaurant_id → users.username.
+        return "SELECT o.*,
+                       cu.username AS customer_name,
+                       cu.email    AS customer_email,
+                       du.username AS driver_name,
+                       du.email    AS driver_email,
+                       du.document AS driver_document,
+                       d.km_cost_regular,
+                       d.km_cost_holidays,
+                       (SELECT ru.username
+                          FROM invoice_lines il
+                          JOIN combos cb ON cb.id = il.combo_id
+                          JOIN users ru ON ru.id = cb.restaurant_id
+                          WHERE il.order_id = o.id
+                          LIMIT 1) AS restaurant_name,
+                       (SELECT r.category
+                          FROM invoice_lines il
+                          JOIN combos cb ON cb.id = il.combo_id
+                          JOIN restaurants r ON r.user_id = cb.restaurant_id
+                          WHERE il.order_id = o.id
+                          LIMIT 1) AS category,
+                       (SELECT COALESCE(SUM(il2.quantity * il2.combo_price), 0)
+                          FROM invoice_lines il2
+                          WHERE il2.order_id = o.id) AS total
+                FROM orders o
+                JOIN customers c  ON c.user_id  = o.customer_id
+                JOIN users cu     ON cu.id      = c.user_id
+                JOIN drivers d    ON d.user_id  = o.driver_id
+                JOIN users du     ON du.id      = d.user_id";
+    }
+
     public function findAll(): array
     {
-        $stmt = $this->db->query(
-            "SELECT o.*,
-                    CONCAT(c.first_name, ' ', c.last_name) AS customer_name,
-                    r.name AS restaurant_name,
-                    r.food_type,
-                    d.full_name AS driver_name,
-                    d.phone     AS driver_phone
-             FROM orders o
-             JOIN customers c    ON c.id = o.customer_id
-             JOIN restaurants r  ON r.id = o.restaurant_id
-             LEFT JOIN delivery_drivers d ON d.id = o.assigned_driver_id
-             ORDER BY o.created_at DESC"
-        );
+        $stmt = $this->db->query($this->listSelect() . ' ORDER BY o.creation_date DESC');
         return $stmt->fetchAll();
     }
 
     public function findById(int $id): ?array
     {
-        $stmt = $this->db->prepare(
-            "SELECT o.*,
-                    CONCAT(c.first_name, ' ', c.last_name) AS customer_name,
-                    c.email        AS customer_email,
-                    c.phone_number AS customer_phone,
-                    r.name         AS restaurant_name,
-                    r.food_type,
-                    r.address      AS restaurant_address,
-                    d.full_name    AS driver_name,
-                    d.phone        AS driver_phone,
-                    d.order_distance       AS driver_order_distance,
-                    d.weekday_cost_per_km  AS driver_weekday_cost_per_km,
-                    d.holiday_cost_per_km  AS driver_holiday_cost_per_km
-             FROM orders o
-             JOIN customers c    ON c.id = o.customer_id
-             JOIN restaurants r  ON r.id = o.restaurant_id
-             LEFT JOIN delivery_drivers d ON d.id = o.assigned_driver_id
-             WHERE o.id = ? LIMIT 1"
-        );
+        $stmt = $this->db->prepare($this->listSelect() . ' WHERE o.id = ? LIMIT 1');
         $stmt->execute([$id]);
         $row = $stmt->fetch();
         return $row ?: null;
@@ -60,75 +63,69 @@ class OrderRepository
     {
         $like = '%' . $term . '%';
         $stmt = $this->db->prepare(
-            "SELECT o.*,
-                    CONCAT(c.first_name, ' ', c.last_name) AS customer_name,
-                    r.name  AS restaurant_name,
-                    r.food_type,
-                    d.full_name AS driver_name,
-                    d.phone     AS driver_phone
-             FROM orders o
-             JOIN customers c    ON c.id = o.customer_id
-             JOIN restaurants r  ON r.id = o.restaurant_id
-             LEFT JOIN delivery_drivers d ON d.id = o.assigned_driver_id
-             WHERE CONCAT(c.first_name, ' ', c.last_name) LIKE ?
-                OR r.name LIKE ?
-                OR o.combo_name LIKE ?
-                OR o.status LIKE ?
-                OR d.full_name LIKE ?
-             ORDER BY o.created_at DESC"
+            $this->listSelect() .
+            ' WHERE cu.username LIKE ? OR du.username LIKE ? OR o.status LIKE ?
+              ORDER BY o.creation_date DESC'
         );
-        $stmt->execute([$like, $like, $like, $like, $like]);
+        $stmt->execute([$like, $like, $like]);
         return $stmt->fetchAll();
     }
 
-    public function create(array $data): int
+    public function findInvoiceLines(int $orderId): array
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO orders
-                (customer_id, restaurant_id, assigned_driver_id, combo_name, combo_price, quantity, total, status, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'SELECT il.combo_id, il.quantity, il.combo_price,
+                    c.name AS combo_name, c.description AS combo_description
+             FROM invoice_lines il
+             JOIN combos c ON c.id = il.combo_id
+             WHERE il.order_id = ?
+             ORDER BY c.name ASC'
         );
-        $stmt->execute([
-            (int) $data['customer_id'],
-            (int) $data['restaurant_id'],
-            isset($data['assigned_driver_id']) ? (int) $data['assigned_driver_id'] : null,
-            $data['combo_name'],
-            (float) $data['combo_price'],
-            (int) $data['quantity'],
-            (float) $data['total'],
-            $data['status'] ?? 'preparing',
-            $data['notes'] ?: null,
-        ]);
-        return (int) $this->db->lastInsertId();
+        $stmt->execute([$orderId]);
+        return $stmt->fetchAll();
     }
 
-    public function updateStatus(int $id, string $status, ?string $deliveredAt): bool
+    public function create(int $customerId, int $driverId): int
     {
-        $stmt = $this->db->prepare(
-            'UPDATE orders SET status = ?, delivered_at = ?, updated_at = NOW() WHERE id = ?'
-        );
-        $stmt->execute([$status, $deliveredAt, $id]);
-        return $stmt->rowCount() > 0;
+        $stmt = $this->db->prepare('CALL sp_create_order(?, ?)');
+        $stmt->execute([$customerId, $driverId]);
+        $row = $stmt->fetch();
+        $stmt->closeCursor();
+        return (int) ($row['id'] ?? 0);
+    }
+
+    public function addInvoiceLine(int $comboId, int $orderId, int $quantity): bool
+    {
+        $stmt = $this->db->prepare('CALL sp_create_invoice_line(?, ?, ?)');
+        $stmt->execute([$comboId, $orderId, $quantity]);
+        $stmt->closeCursor();
+        return true;
+    }
+
+    public function updateStatus(int $id, string $status, ?string $deliveredDate): bool
+    {
+        $stmt = $this->db->prepare('CALL sp_update_order(?, ?, ?)');
+        $stmt->execute([$id, $status, $deliveredDate]);
+        $row = $stmt->fetch();
+        $stmt->closeCursor();
+        return (int) ($row['rows_affected'] ?? 0) > 0;
+    }
+
+    public function deleteInvoiceLine(int $comboId, int $orderId): bool
+    {
+        $stmt = $this->db->prepare('CALL sp_delete_invoice_line(?, ?)');
+        $stmt->execute([$comboId, $orderId]);
+        $row = $stmt->fetch();
+        $stmt->closeCursor();
+        return (int) ($row['rows_affected'] ?? 0) > 0;
     }
 
     public function delete(int $id): bool
     {
-        $stmt = $this->db->prepare('DELETE FROM orders WHERE id = ?');
+        $stmt = $this->db->prepare('CALL sp_delete_order(?)');
         $stmt->execute([$id]);
-        return $stmt->rowCount() > 0;
-    }
-
-    /**
-     * Returns the id of the first available driver with fewer than 4 warnings, or null.
-     */
-    public function findFirstAvailableDriverId(): ?int
-    {
-        $stmt = $this->db->query(
-            "SELECT id FROM delivery_drivers
-             WHERE is_active = 1 AND status = 'available' AND warning_count < 4
-             ORDER BY id ASC LIMIT 1"
-        );
         $row = $stmt->fetch();
-        return $row ? (int) $row['id'] : null;
+        $stmt->closeCursor();
+        return (int) ($row['rows_affected'] ?? 0) > 0;
     }
 }

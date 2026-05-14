@@ -2,7 +2,9 @@
 
 /**
  * Computes invoice breakdown for an existing order.
- * All values are derived on-demand — no billing columns are stored.
+ * Subtotal = SUM(quantity × combo_price) from invoice_lines.
+ * Delivery fee = (weekend ? km_cost_holidays : km_cost_regular)  -- flat fee, since the new schema removed `order_distance`.
+ * VAT = 13% of (subtotal + delivery fee).
  */
 class BillingService
 {
@@ -26,58 +28,56 @@ class BillingService
 
     public function buildInvoice(array $order): array
     {
-        $subtotal  = round((float) $order['total'], 2);
-        $transport = $this->computeTransport($order);
-        $vat       = round(($subtotal + $transport) * self::VAT_RATE, 2);
-        $totalPaid = round($subtotal + $transport + $vat, 2);
+        $items = $order['items'] ?? [];
+        $subtotal = 0.0;
+        foreach ($items as $line) {
+            $subtotal += (float) $line['combo_price'] * (int) $line['quantity'];
+        }
+        $subtotal  = round($subtotal, 2);
+        $delivery  = $this->computeDeliveryFee($order);
+        $vat       = round(($subtotal + $delivery) * self::VAT_RATE, 2);
+        $totalPaid = round($subtotal + $delivery + $vat, 2);
 
         return [
-            'order'       => $order,
-            'subtotal'    => $subtotal,
-            'transport'   => $transport,
-            'vat'         => $vat,
-            'vat_rate'    => self::VAT_RATE,
-            'total_paid'  => $totalPaid,
-            'transport_breakdown' => $this->transportBreakdown($order),
+            'order'      => $order,
+            'items'      => $items,
+            'subtotal'   => $subtotal,
+            'transport'  => $delivery,
+            'vat'        => $vat,
+            'vat_rate'   => self::VAT_RATE,
+            'total_paid' => $totalPaid,
+            'transport_breakdown' => $this->deliveryBreakdown($order, $delivery),
         ];
     }
 
-    private function computeTransport(array $order): float
+    private function computeDeliveryFee(array $order): float
     {
-        if (empty($order['assigned_driver_id'])) {
-            return 0.00;
-        }
-
-        $distance = (float) ($order['driver_order_distance'] ?? 0);
-        $rate     = $this->selectRate($order);
-
-        return round($distance * $rate, 2);
+        $isWeekend = $this->isWeekend($order['creation_date'] ?? null);
+        $rate = $isWeekend
+            ? (float) ($order['km_cost_holidays'] ?? 0)
+            : (float) ($order['km_cost_regular'] ?? 0);
+        return round($rate, 2);
     }
 
-    private function selectRate(array $order): float
+    private function deliveryBreakdown(array $order, float $delivery): array
     {
-        $dayOfWeek = (int) date('N', strtotime($order['created_at']));
-        $isWeekend = $dayOfWeek >= 6;
-
-        return $isWeekend
-            ? (float) ($order['driver_holiday_cost_per_km'] ?? 0)
-            : (float) ($order['driver_weekday_cost_per_km'] ?? 0);
-    }
-
-    private function transportBreakdown(array $order): array
-    {
-        if (empty($order['assigned_driver_id'])) {
-            return ['distance' => 0, 'rate' => 0, 'is_weekend' => false, 'has_driver' => false];
-        }
-
-        $dayOfWeek = (int) date('N', strtotime($order['created_at']));
-        $isWeekend = $dayOfWeek >= 6;
-
+        $isWeekend = $this->isWeekend($order['creation_date'] ?? null);
         return [
-            'has_driver' => true,
-            'distance'   => (float) ($order['driver_order_distance'] ?? 0),
-            'rate'       => $this->selectRate($order),
+            'has_driver' => !empty($order['driver_id']),
+            'rate'       => $isWeekend
+                ? (float) ($order['km_cost_holidays'] ?? 0)
+                : (float) ($order['km_cost_regular'] ?? 0),
             'is_weekend' => $isWeekend,
+            'fee'        => $delivery,
         ];
+    }
+
+    private function isWeekend(?string $datetime): bool
+    {
+        if (!$datetime) {
+            return false;
+        }
+        $dayOfWeek = (int) date('N', strtotime($datetime));
+        return $dayOfWeek >= 6;
     }
 }

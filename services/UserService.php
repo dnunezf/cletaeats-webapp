@@ -1,15 +1,17 @@
 <?php
 
 /**
- * User management business logic.
+ * User management — role/status driven by new enums.
  */
 class UserService
 {
     private UserRepository $repo;
+    private LocationRepository $locationRepo;
 
     public function __construct()
     {
-        $this->repo = new UserRepository();
+        $this->repo         = new UserRepository();
+        $this->locationRepo = new LocationRepository();
     }
 
     public function getAll(): array
@@ -29,7 +31,7 @@ class UserService
 
     public function getPendingUsers(): array
     {
-        return $this->repo->findByStatus('pending');
+        return $this->repo->findByStatus('inactive');
     }
 
     public function approveUser(int $id): bool
@@ -37,9 +39,6 @@ class UserService
         return $this->repo->updateStatus($id, 'active');
     }
 
-    /**
-     * Update user profile. Returns true on success or error array.
-     */
     public function update(int $id, array $data): bool|array
     {
         $existing = $this->repo->findById($id);
@@ -47,85 +46,92 @@ class UserService
             return ['general' => 'User not found.'];
         }
 
-        $validator = new Validator();
-        $validator
-            ->required($data['username'], 'username')
-            ->alphanumeric($data['username'], 'username')
-            ->minLength($data['username'], 3, 'username')
-            ->maxLength($data['username'], 50, 'username')
-            ->required($data['email'], 'email')
-            ->email($data['email'], 'email')
-            ->maxLength($data['email'], 100, 'email');
+        $v = new Validator();
+        $v->required($data['username'] ?? '', 'username')
+          ->alphanumeric($data['username'] ?? '', 'username')
+          ->minLength($data['username'] ?? '', 3, 'username')
+          ->maxLength($data['username'] ?? '', 255, 'username')
+          ->required($data['email'] ?? '', 'email')
+          ->email($data['email'] ?? '', 'email')
+          ->maxLength($data['email'] ?? '', 255, 'email')
+          ->required($data['document'] ?? '', 'document')
+          ->maxLength($data['document'] ?? '', 255, 'document')
+          ->required($data['address'] ?? '', 'address')
+          ->required($data['city'] ?? '', 'city')
+          ->required($data['postal_code'] ?? '', 'postal_code');
 
-        if (!in_array($data['role'] ?? '', ['admin', 'user'], true)) {
-            $validator->required('', 'role');
+        if (!in_array($data['role'] ?? '', User::roles(), true)) {
+            $v->required('', 'role');
         }
-
-        if (!in_array($data['status'] ?? '', ['active', 'pending'], true)) {
-            $validator->required('', 'status');
+        if (!in_array($data['status'] ?? '', User::statuses(), true)) {
+            $v->required('', 'status');
         }
 
         if (!empty($data['password'])) {
-            $validator
-                ->minLength($data['password'], 8, 'password')
-                ->maxLength($data['password'], 72, 'password')
-                ->matches($data['password'], $data['password_confirm'] ?? '', 'password');
+            $v->minLength($data['password'], 8, 'password')
+              ->maxLength($data['password'], 72, 'password')
+              ->matches($data['password'], $data['password_confirm'] ?? '', 'password');
         }
 
-        if (!$validator->isValid()) {
-            return $validator->getFirstErrors();
+        if (!$v->isValid()) {
+            return $v->getFirstErrors();
         }
 
         if ($this->repo->findByUsernameExcluding($data['username'], $id)) {
             return ['username' => 'This username is already taken.'];
         }
-
         if ($this->repo->findByEmailExcluding($data['email'], $id)) {
             return ['email' => 'This email is already registered.'];
         }
+        if ($this->repo->findByDocumentExcluding($data['document'], $data['role'], $id)) {
+            return ['document' => 'This document is already registered for this role.'];
+        }
 
-        // Prevent demoting or deactivating the last active admin.
-        $wasAdminActive = ($existing['role'] === 'admin') && ((int) $existing['is_active'] === 1);
-        $willBeAdminActive = ($data['role'] === 'admin') && ((int) $data['is_active'] === 1);
-
-        if ($wasAdminActive && !$willBeAdminActive && $this->repo->countAdmins() <= 1) {
+        // Prevent removing the last active admin.
+        $wasActiveAdmin = ($existing['role'] === 'admin') && ($existing['status'] === 'active');
+        $willBeActiveAdmin = ($data['role'] === 'admin') && ($data['status'] === 'active');
+        if ($wasActiveAdmin && !$willBeActiveAdmin && $this->repo->countActiveAdmins() <= 1) {
             return ['role' => 'Cannot remove the last active administrator.'];
         }
 
-        $ok = $this->repo->update($id, [
-            'username'  => trim($data['username']),
-            'email'     => trim($data['email']),
-            'role'      => $data['role'],
-            'status'    => $data['status'],
-            'is_active' => (int) $data['is_active'],
+        $locationId = (int) $existing['location_id'];
+        $this->locationRepo->update($locationId, [
+            'address'     => $data['address'],
+            'city'        => $data['city'],
+            'postal_code' => $data['postal_code'],
         ]);
 
-        if ($ok && !empty($data['password'])) {
+        $passwordHash = $existing['password_hash'];
+        $this->repo->update($id, [
+            'username'      => trim($data['username']),
+            'email'         => trim($data['email']),
+            'password_hash' => $passwordHash,
+            'role'          => $data['role'],
+            'status'        => $data['status'],
+            'document'      => trim($data['document']),
+            'location_id'   => $locationId,
+        ]);
+
+        if (!empty($data['password'])) {
             $hash = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
             $this->repo->updatePassword($id, $hash);
         }
 
-        return $ok ? true : ['general' => 'Unable to update user.'];
+        return true;
     }
 
-    /**
-     * Delete a user. Returns true on success or error array.
-     */
     public function delete(int $id, int $currentUserId): bool|array
     {
         if ($id === $currentUserId) {
             return ['general' => 'You cannot delete your own account.'];
         }
-
         $existing = $this->repo->findById($id);
         if (!$existing) {
             return ['general' => 'User not found.'];
         }
-
-        if ($existing['role'] === 'admin' && (int) $existing['is_active'] === 1 && $this->repo->countAdmins() <= 1) {
+        if ($existing['role'] === 'admin' && $existing['status'] === 'active' && $this->repo->countActiveAdmins() <= 1) {
             return ['general' => 'Cannot delete the last active administrator.'];
         }
-
         return $this->repo->delete($id) ? true : ['general' => 'Unable to delete user.'];
     }
 }

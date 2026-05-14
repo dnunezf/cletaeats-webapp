@@ -2,8 +2,8 @@
 -- DROPS
 -- ============================================================
 
-DROP TRIGGER trg_bef_ins_order;
-DROP TRIGGER TRIGGER trg_bef_ins_invoice_line;
+DROP TRIGGER IF EXISTS trg_bef_ins_order;
+DROP TRIGGER IF EXISTS trg_bef_ins_invoice_line;
 
 DROP PROCEDURE IF EXISTS sp_create_location ;
 DROP PROCEDURE IF EXISTS sp_read_locations ;

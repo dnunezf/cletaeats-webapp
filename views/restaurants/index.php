@@ -54,14 +54,14 @@
                         <td>
                             <div class="actions">
                                 <a href="<?= baseUrl('combos?restaurant_id=' . (int) $r['user_id']) ?>"
-                                   class="btn btn-icon btn-outline" title="Combos">Combos</a>
+                                   class="btn btn-icon btn-outline" title="Combos" aria-label="View combos"><?= actionIcon('combos') ?></a>
                                 <?php if ($isAdmin): ?>
                                 <a href="<?= baseUrl('restaurants/edit?id=' . (int) $r['user_id']) ?>"
-                                   class="btn btn-icon btn-outline" title="Edit">Edit</a>
+                                   class="btn btn-icon btn-outline" title="Edit" aria-label="Edit"><?= actionIcon('edit') ?></a>
                                 <button type="button" class="btn btn-icon btn-danger delete-btn"
-                                        title="Delete"
+                                        title="Delete" aria-label="Delete"
                                         data-id="<?= (int) $r['user_id'] ?>"
-                                        data-name="<?= e($r['username']) ?>">Delete</button>
+                                        data-name="<?= e($r['username']) ?>"><?= actionIcon('delete') ?></button>
                                 <?php endif; ?>
                             </div>
                         </td>

@@ -63,6 +63,45 @@ class Validator
         return $this;
     }
 
+    /**
+     * Strong-password rule (single composite check).
+     *  - 8..72 chars (bcrypt's input ceiling)
+     *  - >= 1 lowercase, 1 uppercase, 1 digit, 1 special character
+     *  - no whitespace
+     *
+     * Skipped silently when $value is empty so it composes with optional update flows
+     * (where leaving the field blank means "keep current password"). For required
+     * paths, chain ->required($value, $field) before this rule.
+     */
+    public function password(string $value, string $field = 'password'): self
+    {
+        if ($value === '') {
+            return $this;
+        }
+        $len = strlen($value);
+        if ($len < 8 || $len > 72) {
+            $this->errors[$field][] = 'Password must be between 8 and 72 characters.';
+            return $this;
+        }
+        if (preg_match('/\s/', $value)) {
+            $this->errors[$field][] = 'Password must not contain spaces.';
+            return $this;
+        }
+        if (!preg_match('/[a-z]/', $value)) {
+            $this->errors[$field][] = 'Password must include at least one lowercase letter.';
+        }
+        if (!preg_match('/[A-Z]/', $value)) {
+            $this->errors[$field][] = 'Password must include at least one uppercase letter.';
+        }
+        if (!preg_match('/\d/', $value)) {
+            $this->errors[$field][] = 'Password must include at least one digit.';
+        }
+        if (!preg_match('/[^A-Za-z0-9]/', $value)) {
+            $this->errors[$field][] = 'Password must include at least one special character.';
+        }
+        return $this;
+    }
+
     public function isValid(): bool
     {
         return empty($this->errors);

@@ -56,8 +56,10 @@
             </div>
             <div class="form-group">
                 <label for="password" class="form-label">Password</label>
-                <input type="password" id="password" name="password" class="form-input"
+                <input type="password" id="password" name="password"
+                       class="form-input js-password" data-rules="#pwRulesCreateAccount"
                        autocomplete="new-password" required>
+                <div id="pwRulesCreateAccount"><?php require BASE_PATH . '/views/partials/password-rules.php'; ?></div>
             </div>
             <div class="form-group">
                 <label for="password_confirm" class="form-label">Confirm Password</label>

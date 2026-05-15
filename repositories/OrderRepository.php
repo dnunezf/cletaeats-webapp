@@ -71,6 +71,113 @@ class OrderRepository
         return $stmt->fetchAll();
     }
 
+    // ---- Role-scoped finders ---------------------------------------------
+
+    public function findAllByCustomer(int $userId): array
+    {
+        $stmt = $this->db->prepare(
+            $this->listSelect() . ' WHERE o.customer_id = ? ORDER BY o.creation_date DESC'
+        );
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll();
+    }
+
+    public function searchByCustomer(int $userId, string $term): array
+    {
+        $like = '%' . $term . '%';
+        $stmt = $this->db->prepare(
+            $this->listSelect() .
+            ' WHERE o.customer_id = ?
+                AND (cu.username LIKE ? OR du.username LIKE ? OR o.status LIKE ?)
+              ORDER BY o.creation_date DESC'
+        );
+        $stmt->execute([$userId, $like, $like, $like]);
+        return $stmt->fetchAll();
+    }
+
+    public function findAllByDriver(int $userId): array
+    {
+        $stmt = $this->db->prepare(
+            $this->listSelect() . ' WHERE o.driver_id = ? ORDER BY o.creation_date DESC'
+        );
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll();
+    }
+
+    public function searchByDriver(int $userId, string $term): array
+    {
+        $like = '%' . $term . '%';
+        $stmt = $this->db->prepare(
+            $this->listSelect() .
+            ' WHERE o.driver_id = ?
+                AND (cu.username LIKE ? OR du.username LIKE ? OR o.status LIKE ?)
+              ORDER BY o.creation_date DESC'
+        );
+        $stmt->execute([$userId, $like, $like, $like]);
+        return $stmt->fetchAll();
+    }
+
+    public function findAllByRestaurant(int $userId): array
+    {
+        $stmt = $this->db->prepare(
+            $this->listSelect() .
+            ' WHERE EXISTS (
+                  SELECT 1 FROM invoice_lines il
+                  JOIN combos cb ON cb.id = il.combo_id
+                  WHERE il.order_id = o.id AND cb.restaurant_id = ?
+              )
+              ORDER BY o.creation_date DESC'
+        );
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll();
+    }
+
+    public function searchByRestaurant(int $userId, string $term): array
+    {
+        $like = '%' . $term . '%';
+        $stmt = $this->db->prepare(
+            $this->listSelect() .
+            ' WHERE EXISTS (
+                  SELECT 1 FROM invoice_lines il
+                  JOIN combos cb ON cb.id = il.combo_id
+                  WHERE il.order_id = o.id AND cb.restaurant_id = ?
+              )
+              AND (cu.username LIKE ? OR du.username LIKE ? OR o.status LIKE ?)
+              ORDER BY o.creation_date DESC'
+        );
+        $stmt->execute([$userId, $like, $like, $like]);
+        return $stmt->fetchAll();
+    }
+
+    // ---- Ownership checks (single-row existence) -------------------------
+
+    public function isOwnedByCustomer(int $orderId, int $userId): bool
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM orders WHERE id = ? AND customer_id = ? LIMIT 1');
+        $stmt->execute([$orderId, $userId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    public function isOwnedByDriver(int $orderId, int $userId): bool
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM orders WHERE id = ? AND driver_id = ? LIMIT 1');
+        $stmt->execute([$orderId, $userId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    public function isVisibleToRestaurant(int $orderId, int $userId): bool
+    {
+        $stmt = $this->db->prepare(
+            'SELECT 1
+               FROM invoice_lines il
+               JOIN combos cb ON cb.id = il.combo_id
+              WHERE il.order_id = ? AND cb.restaurant_id = ?
+              LIMIT 1'
+        );
+        $stmt->execute([$orderId, $userId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
     public function findInvoiceLines(int $orderId): array
     {
         $stmt = $this->db->prepare(

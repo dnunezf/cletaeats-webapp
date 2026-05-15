@@ -29,7 +29,10 @@
                             <form action="<?= baseUrl('users/approve') ?>" method="POST" style="display: inline;">
                                 <?= csrfField() ?>
                                 <input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
-                                <button type="submit" class="btn btn-primary btn-sm">Approve</button>
+                                <button type="submit" class="btn btn-primary btn-sm" title="Approve user" aria-label="Approve user">
+                                    <?= actionIcon('approve') ?>
+                                    <span>Approve</span>
+                                </button>
                             </form>
                         </td>
                     </tr>

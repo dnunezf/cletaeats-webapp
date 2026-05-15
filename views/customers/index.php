@@ -55,11 +55,11 @@
                             <div class="actions">
                                 <?php if ($isAdmin): ?>
                                 <a href="<?= baseUrl('customers/edit?id=' . (int) $c['user_id']) ?>"
-                                   class="btn btn-icon btn-outline" title="Edit">Edit</a>
+                                   class="btn btn-icon btn-outline" title="Edit" aria-label="Edit"><?= actionIcon('edit') ?></a>
                                 <button type="button" class="btn btn-icon btn-danger delete-btn"
-                                        title="Delete"
+                                        title="Delete" aria-label="Delete"
                                         data-id="<?= (int) $c['user_id'] ?>"
-                                        data-name="<?= e($c['username']) ?>">Delete</button>
+                                        data-name="<?= e($c['username']) ?>"><?= actionIcon('delete') ?></button>
                                 <?php else: ?>
                                     <span style="color: var(--color-text-light);">—</span>
                                 <?php endif; ?>

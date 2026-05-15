@@ -11,8 +11,10 @@
     <h2 class="page-title">Order #<?= (int) $order['id'] ?></h2>
     <div style="display:flex; gap: var(--space-sm);">
         <a href="<?= baseUrl('orders') ?>" class="btn btn-ghost">Back to Orders</a>
-        <a href="<?= baseUrl('billing/show?id=' . (int) $order['id']) ?>" class="btn btn-outline">View Invoice</a>
-        <?php if ($order['status'] === 'delivered' && empty($complaint)): ?>
+        <?php if (userIsAnyOf(['admin', 'customer'])): ?>
+            <a href="<?= baseUrl('billing/show?id=' . (int) $order['id']) ?>" class="btn btn-outline">View Invoice</a>
+        <?php endif; ?>
+        <?php if (userIsAnyOf(['admin', 'customer']) && $order['status'] === 'delivered' && empty($complaint)): ?>
             <a href="<?= baseUrl('complaints/create?order_id=' . (int) $order['id']) ?>" class="btn btn-outline">File Complaint</a>
         <?php endif; ?>
     </div>
@@ -119,7 +121,7 @@
             <div class="order-detail-total-amount">$<?= e(number_format((float) $order['total'], 2)) ?></div>
         </div>
 
-        <?php if ($isAdmin && !empty($transitions)): ?>
+        <?php if (userIsAnyOf(['admin', 'driver']) && !empty($transitions)): ?>
         <div class="order-status-controls">
             <div class="order-status-controls-title">Update Status</div>
             <form id="orderStatusForm" action="<?= baseUrl('orders/update-status') ?>" method="POST">

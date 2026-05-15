@@ -68,13 +68,16 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="password" class="form-label">Password</label>
-                    <input type="password" id="password" name="password" class="form-input" autocomplete="new-password" required>
+                    <input type="password" id="password" name="password"
+                           class="form-input js-password" data-rules="#pwRulesRegister"
+                           autocomplete="new-password" required>
                 </div>
                 <div class="form-group">
                     <label for="password_confirm" class="form-label">Confirm Password</label>
                     <input type="password" id="password_confirm" name="password_confirm" class="form-input" autocomplete="new-password" required>
                 </div>
             </div>
+            <div id="pwRulesRegister" class="form-group"><?php require BASE_PATH . '/views/partials/password-rules.php'; ?></div>
 
             <div style="display: flex; gap: var(--space-md); justify-content: flex-end; padding-top: var(--space-md);">
                 <a href="<?= baseUrl('dashboard') ?>" class="btn btn-ghost">Cancel</a>

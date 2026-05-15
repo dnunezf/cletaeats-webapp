@@ -12,9 +12,10 @@ class ComplaintController
     public function create(): void
     {
         $orderId = (int) ($_GET['order_id'] ?? 0);
-        if ($orderId <= 0) {
-            redirect('orders');
-            return;
+        if ($orderId <= 0 || !$this->canFileComplaint($orderId)) {
+            http_response_code(404);
+            require BASE_PATH . '/views/errors/404.php';
+            exit;
         }
         $pageTitle = 'File a Complaint';
         $currentPage = 'orders';
@@ -29,6 +30,12 @@ class ComplaintController
         $rating  = (int) ($_POST['rating'] ?? 0);
 
         if ($orderId <= 0) { redirect('orders'); return; }
+
+        if (!$this->canFileComplaint($orderId)) {
+            http_response_code(403);
+            require BASE_PATH . '/views/errors/403.php';
+            exit;
+        }
 
         $result = $this->complaintService->create($orderId, $content, $rating);
         if (is_array($result)) {
@@ -54,5 +61,28 @@ class ComplaintController
         if (isAjax()) { jsonResponse(['success' => true, 'message' => 'Complaint deleted.']); return; }
         setFlash('success', 'Complaint deleted.');
         redirect('orders/show?id=' . $orderId);
+    }
+
+    /**
+     * Admin can always file/edit a complaint. Customers can only file complaints on
+     * their own delivered orders.
+     */
+    private function canFileComplaint(int $orderId): bool
+    {
+        $orderRepo = new OrderRepository();
+        $order = $orderRepo->findById($orderId);
+        if (!$order) {
+            return false;
+        }
+        if (userIsAdmin()) {
+            return true;
+        }
+        if (!userIsCustomer()) {
+            return false;
+        }
+        if (($order['status'] ?? '') !== 'delivered') {
+            return false;
+        }
+        return (int) $order['customer_id'] === (int) (currentUserId() ?? 0);
     }
 }

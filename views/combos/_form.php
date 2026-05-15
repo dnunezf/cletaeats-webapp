@@ -5,6 +5,9 @@
         <input type="hidden" name="id" value="<?= (int) $combo['id'] ?>">
     <?php endif; ?>
 
+    <?php if (userIsRestaurant()): ?>
+        <input type="hidden" name="restaurant_id" value="<?= (int) (currentUserId() ?? 0) ?>">
+    <?php else: ?>
     <div class="form-row">
         <div class="form-group">
             <label for="restaurant_id" class="form-label">Restaurant <span style="color: var(--color-error)">*</span></label>
@@ -24,6 +27,7 @@
             <?php endif; ?>
         </div>
     </div>
+    <?php endif; ?>
 
     <div class="form-group">
         <label for="name" class="form-label">Combo Name <span style="color: var(--color-error)">*</span></label>

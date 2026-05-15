@@ -176,10 +176,10 @@ class CustomerService
 
         if ($isCreate) {
             $v->required($data['password'] ?? '', 'password')
-              ->minLength($data['password'] ?? '', 8, 'password')
+              ->password($data['password'] ?? '', 'password')
               ->matches($data['password'] ?? '', $data['password_confirm'] ?? '', 'password');
         } elseif (!empty($data['password'])) {
-            $v->minLength($data['password'], 8, 'password')
+            $v->password($data['password'], 'password')
               ->matches($data['password'], $data['password_confirm'] ?? '', 'password');
         }
 

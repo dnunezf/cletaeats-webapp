@@ -1,0 +1,16 @@
+# Avatars are user-uploaded image files. Disable script execution as a defense
+# against double-extension and MIME-confusion uploads — only static delivery.
+<FilesMatch "\.(?i:php|phtml|phar|pl|py|rb|sh|cgi|asp|aspx|js|html?)$">
+    Require all denied
+</FilesMatch>
+
+# Be explicit about the allowed image types.
+<FilesMatch "\.(?i:jpe?g|png|webp|gif)$">
+    Require all granted
+</FilesMatch>
+
+Options -ExecCGI -Indexes
+AddType image/jpeg .jpg .jpeg
+AddType image/png .png
+AddType image/webp .webp
+AddType image/gif .gif

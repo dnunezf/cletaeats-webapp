@@ -72,7 +72,9 @@
             <label for="password" class="form-label">
                 Password <?= empty($customer) ? '<span style="color: var(--color-error)">*</span>' : '<small>(leave blank to keep)</small>' ?>
             </label>
-            <input type="password" id="password" name="password" class="form-input" <?= empty($customer) ? 'required' : '' ?>>
+            <input type="password" id="password" name="password"
+                   class="form-input js-password" data-rules="#pwRulesCustomer"
+                   <?= empty($customer) ? 'required' : '' ?>>
             <span class="form-error" id="password-error"></span>
         </div>
         <div class="form-group">
@@ -80,6 +82,7 @@
             <input type="password" id="password_confirm" name="password_confirm" class="form-input">
         </div>
     </div>
+    <div id="pwRulesCustomer" class="form-group"><?php require BASE_PATH . '/views/partials/password-rules.php'; ?></div>
 
     <div style="display: flex; gap: var(--space-md); justify-content: flex-end; padding-top: var(--space-md);">
         <a href="<?= baseUrl('customers') ?>" class="btn btn-ghost">Cancel</a>

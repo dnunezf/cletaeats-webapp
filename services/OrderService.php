@@ -44,6 +44,39 @@ class OrderService
         return $term === '' ? $this->getAll() : $this->repo->search($term);
     }
 
+    /**
+     * Returns the order list visible to the current role:
+     *   admin      -> all orders
+     *   customer   -> orders where customer_id = currentUserId()
+     *   driver     -> orders where driver_id   = currentUserId()
+     *   restaurant -> orders that contain at least one combo of currentUserId()
+     */
+    public function getAllScoped(string $search = ''): array
+    {
+        $search = trim($search);
+        $userId = (int) (currentUserId() ?? 0);
+        $role   = currentRole();
+
+        switch ($role) {
+            case 'admin':
+                return $search === '' ? $this->repo->findAll() : $this->repo->search($search);
+            case 'customer':
+                return $search === ''
+                    ? $this->repo->findAllByCustomer($userId)
+                    : $this->repo->searchByCustomer($userId, $search);
+            case 'driver':
+                return $search === ''
+                    ? $this->repo->findAllByDriver($userId)
+                    : $this->repo->searchByDriver($userId, $search);
+            case 'restaurant':
+                return $search === ''
+                    ? $this->repo->findAllByRestaurant($userId)
+                    : $this->repo->searchByRestaurant($userId, $search);
+            default:
+                return [];
+        }
+    }
+
     public function place(array $data): int|array
     {
         $errors = $this->validate($data);

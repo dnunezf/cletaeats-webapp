@@ -39,6 +39,28 @@ class ComboRepository
         return $stmt->fetchAll();
     }
 
+    public function searchByRestaurant(int $restaurantId, string $term): array
+    {
+        $like = '%' . $term . '%';
+        $stmt = $this->db->prepare(
+            'SELECT c.*, u.username AS restaurant_name
+               FROM combos c
+               JOIN users u ON u.id = c.restaurant_id
+              WHERE c.restaurant_id = ?
+                AND (c.name LIKE ? OR c.description LIKE ?)
+              ORDER BY c.name ASC'
+        );
+        $stmt->execute([$restaurantId, $like, $like]);
+        return $stmt->fetchAll();
+    }
+
+    public function isOwnedByRestaurant(int $comboId, int $restaurantUserId): bool
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM combos WHERE id = ? AND restaurant_id = ? LIMIT 1');
+        $stmt->execute([$comboId, $restaurantUserId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
     public function search(string $term): array
     {
         $like = '%' . $term . '%';

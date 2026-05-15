@@ -68,11 +68,12 @@
                         <td>
                             <div class="actions">
                                 <a href="<?= baseUrl('orders/show?id=' . (int) $o['id']) ?>"
-                                   class="btn btn-icon btn-outline" title="View">View</a>
+                                   class="btn btn-icon btn-outline" title="View" aria-label="View"><?= actionIcon('view') ?></a>
                                 <?php if ($isAdmin): ?>
                                 <button type="button" class="btn btn-icon btn-danger delete-btn"
+                                        title="Delete" aria-label="Delete"
                                         data-id="<?= (int) $o['id'] ?>"
-                                        data-label="Order #<?= (int) $o['id'] ?>">Delete</button>
+                                        data-label="Order #<?= (int) $o['id'] ?>"><?= actionIcon('delete') ?></button>
                                 <?php endif; ?>
                             </div>
                         </td>

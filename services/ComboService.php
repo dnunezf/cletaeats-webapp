@@ -26,6 +26,14 @@ class ComboService
         return $this->repo->findAllByRestaurant($restaurantId);
     }
 
+    public function searchByRestaurant(int $restaurantId, string $term): array
+    {
+        $term = trim($term);
+        return $term === ''
+            ? $this->repo->findAllByRestaurant($restaurantId)
+            : $this->repo->searchByRestaurant($restaurantId, $term);
+    }
+
     public function search(string $term): array
     {
         $term = trim($term);

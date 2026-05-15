@@ -82,13 +82,16 @@
             <label for="password" class="form-label">
                 Password <?= empty($restaurant) ? '<span style="color: var(--color-error)">*</span>' : '<small>(leave blank to keep)</small>' ?>
             </label>
-            <input type="password" id="password" name="password" class="form-input" <?= empty($restaurant) ? 'required' : '' ?>>
+            <input type="password" id="password" name="password"
+                   class="form-input js-password" data-rules="#pwRulesRestaurant"
+                   <?= empty($restaurant) ? 'required' : '' ?>>
         </div>
         <div class="form-group">
             <label for="password_confirm" class="form-label">Confirm Password</label>
             <input type="password" id="password_confirm" name="password_confirm" class="form-input">
         </div>
     </div>
+    <div id="pwRulesRestaurant" class="form-group"><?php require BASE_PATH . '/views/partials/password-rules.php'; ?></div>
 
     <div style="display: flex; gap: var(--space-md); justify-content: flex-end; padding-top: var(--space-md);">
         <a href="<?= baseUrl('restaurants') ?>" class="btn btn-ghost">Cancel</a>

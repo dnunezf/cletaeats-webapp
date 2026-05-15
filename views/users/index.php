@@ -50,12 +50,12 @@
                         <td>
                             <div class="actions">
                                 <a href="<?= baseUrl('users/edit?id=' . (int) $u['id']) ?>"
-                                   class="btn btn-icon btn-outline" title="Edit">Edit</a>
+                                   class="btn btn-icon btn-outline" title="Edit" aria-label="Edit"><?= actionIcon('edit') ?></a>
                                 <?php if ((int) $u['id'] !== $currentUserId): ?>
                                 <button type="button" class="btn btn-icon btn-danger delete-btn"
-                                        title="Delete"
+                                        title="Delete" aria-label="Delete"
                                         data-id="<?= (int) $u['id'] ?>"
-                                        data-name="<?= e($u['username']) ?>">Delete</button>
+                                        data-name="<?= e($u['username']) ?>"><?= actionIcon('delete') ?></button>
                                 <?php endif; ?>
                             </div>
                         </td>

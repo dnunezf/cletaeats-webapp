@@ -15,5 +15,6 @@
     <?= $content ?>
     <script src="<?= baseUrl('js/validation.js') ?>"></script>
     <script src="<?= baseUrl('js/auth.js') ?>"></script>
+    <script src="<?= baseUrl('js/password-strength.js') ?>"></script>
 </body>
 </html>

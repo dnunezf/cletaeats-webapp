@@ -167,8 +167,7 @@ class AuthService
 
         if ($isCreate) {
             $v->required($data['password'] ?? '', 'password')
-              ->minLength($data['password'] ?? '', 8, 'password')
-              ->maxLength($data['password'] ?? '', 72, 'password')
+              ->password($data['password'] ?? '', 'password')
               ->matches($data['password'] ?? '', $data['password_confirm'] ?? '', 'password');
         }
         return $v->isValid() ? [] : $v->getFirstErrors();

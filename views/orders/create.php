@@ -22,6 +22,7 @@
                 <?= csrfField() ?>
                 <input type="hidden" name="restaurant_id" value="<?= (int) $restaurant['user_id'] ?>">
 
+                <?php if (userIsAdmin()): ?>
                 <div class="form-section-title">Customer</div>
                 <div class="form-group">
                     <label for="customer_id" class="form-label">Select Customer <span style="color: var(--color-error)">*</span></label>
@@ -37,6 +38,9 @@
                         <span class="form-error" style="display: block;"><?= e($errors['customer_id']) ?></span>
                     <?php endif; ?>
                 </div>
+                <?php else: ?>
+                    <input type="hidden" name="customer_id" value="<?= (int) (currentUserId() ?? 0) ?>">
+                <?php endif; ?>
 
                 <div class="form-section-title">Order Details</div>
 

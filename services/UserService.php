@@ -68,8 +68,7 @@ class UserService
         }
 
         if (!empty($data['password'])) {
-            $v->minLength($data['password'], 8, 'password')
-              ->maxLength($data['password'], 72, 'password')
+            $v->password($data['password'], 'password')
               ->matches($data['password'], $data['password_confirm'] ?? '', 'password');
         }
 

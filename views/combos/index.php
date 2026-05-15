@@ -1,5 +1,5 @@
 <?php $currentPage = 'combos'; ?>
-<?php $isAdmin = (($_SESSION['role'] ?? '') === 'admin'); ?>
+<?php $canManage = userIsAnyOf(['admin', 'restaurant']); ?>
 
 <div class="page-header">
     <h2 class="page-title">
@@ -27,7 +27,7 @@
                     <th>Description</th>
                     <?php if (empty($restaurant)): ?><th>Restaurant</th><?php endif; ?>
                     <th style="text-align: right;">Price</th>
-                    <?php if ($isAdmin): ?><th style="width: 140px;">Actions</th><?php endif; ?>
+                    <?php if ($canManage): ?><th style="width: 140px;">Actions</th><?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -39,13 +39,15 @@
                             <td><?= e($c['restaurant_name'] ?? '—') ?></td>
                         <?php endif; ?>
                         <td style="text-align: right; font-weight: 600;">$<?= e(number_format((float) $c['price'], 2)) ?></td>
-                        <?php if ($isAdmin): ?>
+                        <?php if ($canManage): ?>
                         <td>
                             <div class="actions">
-                                <a href="<?= baseUrl('combos/edit?id=' . (int) $c['id']) ?>" class="btn btn-icon btn-outline">Edit</a>
+                                <a href="<?= baseUrl('combos/edit?id=' . (int) $c['id']) ?>"
+                                   class="btn btn-icon btn-outline" title="Edit" aria-label="Edit"><?= actionIcon('edit') ?></a>
                                 <button type="button" class="btn btn-icon btn-danger delete-btn"
+                                        title="Delete" aria-label="Delete"
                                         data-id="<?= (int) $c['id'] ?>"
-                                        data-name="<?= e($c['name']) ?>">Delete</button>
+                                        data-name="<?= e($c['name']) ?>"><?= actionIcon('delete') ?></button>
                             </div>
                         </td>
                         <?php endif; ?>
@@ -56,7 +58,7 @@
     </div>
 <?php endif; ?>
 
-<?php if ($isAdmin): ?>
+<?php if ($canManage): ?>
 <a href="<?= baseUrl('combos/create' . (!empty($restaurant) ? '?restaurant_id=' . (int) $restaurant['user_id'] : '')) ?>" class="fab">
     <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
 </a>

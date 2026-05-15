@@ -51,10 +51,12 @@
                         <td>
                             <div class="actions">
                                 <?php if ($isAdmin): ?>
-                                <a href="<?= baseUrl('drivers/edit?id=' . (int) $d['user_id']) ?>" class="btn btn-icon btn-outline">Edit</a>
+                                <a href="<?= baseUrl('drivers/edit?id=' . (int) $d['user_id']) ?>"
+                                   class="btn btn-icon btn-outline" title="Edit" aria-label="Edit"><?= actionIcon('edit') ?></a>
                                 <button type="button" class="btn btn-icon btn-danger delete-btn"
+                                        title="Delete" aria-label="Delete"
                                         data-id="<?= (int) $d['user_id'] ?>"
-                                        data-name="<?= e($d['username']) ?>">Delete</button>
+                                        data-name="<?= e($d['username']) ?>"><?= actionIcon('delete') ?></button>
                                 <?php else: ?>
                                     <span style="color: var(--color-text-light);">—</span>
                                 <?php endif; ?>

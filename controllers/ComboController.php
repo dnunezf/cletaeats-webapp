@@ -16,8 +16,15 @@ class ComboController
         $search = trim($_GET['search'] ?? '');
         $restaurantId = (int) ($_GET['restaurant_id'] ?? 0);
 
+        // Restaurants only ever see their own combos, regardless of GET params.
+        if (userIsRestaurant()) {
+            $restaurantId = (int) (currentUserId() ?? 0);
+        }
+
         if ($restaurantId > 0) {
-            $combos = $this->comboService->getByRestaurant($restaurantId);
+            $combos = $search !== ''
+                ? $this->comboService->searchByRestaurant($restaurantId, $search)
+                : $this->comboService->getByRestaurant($restaurantId);
             $restaurant = $this->restaurantRepo->findById($restaurantId);
         } else {
             $combos = $search !== '' ? $this->comboService->search($search) : $this->comboService->getAll();
@@ -32,7 +39,13 @@ class ComboController
     public function create(): void
     {
         $restaurantId = (int) ($_GET['restaurant_id'] ?? 0);
-        $restaurants  = $this->restaurantRepo->findAll();
+        // For the restaurant role, the picker is always their own user_id.
+        if (userIsRestaurant()) {
+            $restaurantId = (int) (currentUserId() ?? 0);
+            $restaurants  = [];
+        } else {
+            $restaurants  = $this->restaurantRepo->findAll();
+        }
         $combo        = null;
         $formAction   = baseUrl('combos/store');
 
@@ -45,6 +58,10 @@ class ComboController
     {
         csrfCheck();
         $data = $this->extractFormData();
+        // Restaurants can only create combos under their own restaurant.
+        if (userIsRestaurant()) {
+            $data['restaurant_id'] = (int) (currentUserId() ?? 0);
+        }
         $result = $this->comboService->create($data);
         if (is_array($result)) {
             setFlash('errors', $result);
@@ -60,12 +77,12 @@ class ComboController
     {
         $id = (int) ($_GET['id'] ?? 0);
         $combo = $this->comboService->getById($id);
-        if (!$combo) {
+        if (!$combo || !$this->canManageCombo($combo)) {
             http_response_code(404);
             require BASE_PATH . '/views/errors/404.php';
             exit;
         }
-        $restaurants = $this->restaurantRepo->findAll();
+        $restaurants = userIsRestaurant() ? [] : $this->restaurantRepo->findAll();
         $formAction  = baseUrl('combos/update');
         $pageTitle   = 'Edit Combo';
         $currentPage = 'combos';
@@ -77,7 +94,21 @@ class ComboController
         csrfCheck();
         $id = (int) ($_POST['id'] ?? 0);
         if ($id <= 0) { redirect('combos'); return; }
+
+        // Restaurant role: must own the combo, and cannot reassign it elsewhere.
+        if (userIsRestaurant()) {
+            if (!$this->comboService->getById($id)
+                || !$this->ownsCombo($id)) {
+                http_response_code(404);
+                require BASE_PATH . '/views/errors/404.php';
+                exit;
+            }
+        }
+
         $data = $this->extractFormData();
+        if (userIsRestaurant()) {
+            $data['restaurant_id'] = (int) (currentUserId() ?? 0);
+        }
         $result = $this->comboService->update($id, $data);
         if (is_array($result)) {
             setFlash('errors', $result);
@@ -98,6 +129,12 @@ class ComboController
             redirect('combos');
             return;
         }
+        if (userIsRestaurant() && !$this->ownsCombo($id)) {
+            if (isAjax()) { jsonResponse(['success' => false, 'message' => 'Forbidden.'], 403); }
+            http_response_code(403);
+            require BASE_PATH . '/views/errors/403.php';
+            exit;
+        }
         $this->comboService->delete($id);
         if (isAjax()) { jsonResponse(['success' => true, 'message' => 'Combo deleted successfully.']); return; }
         setFlash('success', 'Combo deleted successfully.');
@@ -112,5 +149,23 @@ class ComboController
             'description'   => trim($_POST['description'] ?? ''),
             'price'         => trim($_POST['price'] ?? ''),
         ];
+    }
+
+    /** Admin always; restaurant only if it owns the combo. */
+    private function canManageCombo(array $combo): bool
+    {
+        if (userIsAdmin()) {
+            return true;
+        }
+        if (userIsRestaurant()) {
+            return (int) ($combo['restaurant_id'] ?? 0) === (int) (currentUserId() ?? 0);
+        }
+        return false;
+    }
+
+    private function ownsCombo(int $comboId): bool
+    {
+        $repo = new ComboRepository();
+        return $repo->isOwnedByRestaurant($comboId, (int) (currentUserId() ?? 0));
     }
 }

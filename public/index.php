@@ -20,6 +20,9 @@ require_once BASE_PATH . '/config/app.php';
 require_once BASE_PATH . '/helpers/response.php';
 require_once BASE_PATH . '/helpers/csrf.php';
 require_once BASE_PATH . '/helpers/validation.php';
+require_once BASE_PATH . '/helpers/auth.php';
+require_once BASE_PATH . '/helpers/avatar.php';
+require_once BASE_PATH . '/views/partials/action-icons.php';
 
 // Load database
 require_once BASE_PATH . '/config/database.php';
@@ -55,6 +58,7 @@ spl_autoload_register(function (string $class): void {
         'OrderService'              => 'services/OrderService.php',
         'BillingService'            => 'services/BillingService.php',
         'ReportsService'            => 'services/ReportsService.php',
+        'ProfileService'            => 'services/ProfileService.php',
         'AuthController'            => 'controllers/AuthController.php',
         'CustomerController'        => 'controllers/CustomerController.php',
         'RestaurantController'      => 'controllers/RestaurantController.php',
@@ -66,9 +70,11 @@ spl_autoload_register(function (string $class): void {
         'OrderController'           => 'controllers/OrderController.php',
         'BillingController'         => 'controllers/BillingController.php',
         'ReportsController'         => 'controllers/ReportsController.php',
+        'ProfileController'         => 'controllers/ProfileController.php',
         'AuthMiddleware'            => 'middleware/AuthMiddleware.php',
         'AdminMiddleware'           => 'middleware/AdminMiddleware.php',
         'GuestMiddleware'           => 'middleware/GuestMiddleware.php',
+        'RoleMiddleware'            => 'middleware/RoleMiddleware.php',
     ];
 
     if (isset($classMap[$class])) {
@@ -150,6 +156,12 @@ $middlewareMap = [
 ];
 
 foreach ($route['middleware'] as $mw) {
+    // role:<csv> -> RoleMiddleware with the allowlist
+    if (strncmp($mw, 'role:', 5) === 0) {
+        $roles = explode(',', substr($mw, 5));
+        (new RoleMiddleware($roles))->handle();
+        continue;
+    }
     if (isset($middlewareMap[$mw])) {
         $middlewareClass = $middlewareMap[$mw];
         $middleware = new $middlewareClass();

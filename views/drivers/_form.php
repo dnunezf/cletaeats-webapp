@@ -1,3 +1,9 @@
+<?php
+/** @var string     $formAction Controller-provided form target URL */
+/** @var array|null $driver     Existing driver when editing, null when creating */
+$formAction ??= '';
+$driver     ??= null;
+?>
 <form id="driverForm" action="<?= e($formAction) ?>" method="POST" novalidate>
     <?= csrfField() ?>
 

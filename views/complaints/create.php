@@ -1,3 +1,7 @@
+<?php
+/** @var int $orderId Controller-provided order id this complaint is being filed against */
+$orderId ??= 0;
+?>
 <?php $currentPage = 'orders'; ?>
 
 <div class="page-header">

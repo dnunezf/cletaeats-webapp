@@ -46,6 +46,7 @@ $asset = static function (string $path): string {
     <script src="<?= $asset('js/drivers.js') ?>"></script>
     <script src="<?= $asset('js/users.js') ?>"></script>
     <script src="<?= $asset('js/orders.js') ?>"></script>
+    <script src="<?= $asset('js/combos.js') ?>"></script>
     <script src="<?= $asset('js/password-strength.js') ?>"></script>
 </body>
 </html>

@@ -1,6 +1,12 @@
+<?php
+/** @var array  $user       Controller-provided user record (with joined location columns) */
+/** @var string $formAction Controller-provided form target URL */
+$user       = isset($user)       && is_array($user) ? $user : [];
+$formAction = isset($formAction) ? (string) $formAction : '';
+?>
 <?php $currentPage = 'users'; ?>
 <?php $currentUserId = (int) ($_SESSION['user_id'] ?? 0); ?>
-<?php $isSelf = ((int) $user['id'] === $currentUserId); ?>
+<?php $isSelf = ((int) ($user['id'] ?? 0) === $currentUserId); ?>
 
 <div class="page-header">
     <h2 class="page-title">Edit User</h2>

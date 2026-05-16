@@ -1,3 +1,7 @@
+<?php
+/** @var string $content Inner view markup captured by view() before this layout runs */
+$content ??= '';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

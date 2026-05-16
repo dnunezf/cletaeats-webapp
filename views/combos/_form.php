@@ -1,3 +1,13 @@
+<?php
+/** @var string     $formAction   Controller-provided form target URL */
+/** @var array      $restaurants  Restaurant options for the picker (empty for the restaurant role) */
+/** @var array|null $combo        Existing combo when editing, null when creating */
+/** @var int        $restaurantId Pre-selected restaurant id (create flow) */
+$formAction   ??= '';
+$restaurants  ??= [];
+$combo        ??= null;
+$restaurantId ??= 0;
+?>
 <form id="comboForm" action="<?= e($formAction) ?>" method="POST" novalidate>
     <?= csrfField() ?>
 

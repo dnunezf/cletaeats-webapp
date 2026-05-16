@@ -1,3 +1,9 @@
+<?php
+/** @var string     $formAction Controller-provided form target URL */
+/** @var array|null $customer   Existing customer when editing, null when creating */
+$formAction ??= '';
+$customer   ??= null;
+?>
 <form id="customerForm" action="<?= e($formAction) ?>" method="POST" novalidate>
     <?= csrfField() ?>
 

@@ -20,6 +20,11 @@
     animation: scaleIn 0.3s ease;
 }
 
+/* Wider variant for multi-field forms (e.g. Create Account) */
+.auth-card-wide {
+    max-width: 640px;
+}
+
 .auth-logo {
     text-align: center;
     margin-bottom: var(--space-xl);
@@ -58,8 +63,61 @@
     font-size: var(--font-size-xl);
     font-weight: 600;
     text-align: center;
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-xs);
     color: var(--color-text);
+}
+
+.auth-subtitle {
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--space-xl);
+}
+
+/* Section divider headings inside auth forms */
+.auth-section-title {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-primary-dark);
+    margin: var(--space-lg) 0 var(--space-md);
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid var(--color-divider);
+}
+
+.auth-section-title:first-of-type {
+    margin-top: 0;
+}
+
+/* Required-field marker */
+.form-required {
+    color: var(--color-error);
+    margin-left: 2px;
+}
+
+/* Input with leading icon (auth forms) */
+.input-with-icon {
+    position: relative;
+}
+
+.input-with-icon .input-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-light);
+    pointer-events: none;
+    transition: color var(--transition-fast);
+}
+
+.input-with-icon .form-input {
+    padding-left: 2.5rem;
+}
+
+.input-with-icon .form-input:focus + .input-icon,
+.input-with-icon:focus-within .input-icon {
+    color: var(--color-primary);
 }
 
 .auth-footer {

@@ -1,3 +1,9 @@
+<?php
+/** @var string     $formAction Controller-provided form target URL */
+/** @var array|null $restaurant Existing restaurant when editing, null when creating */
+$formAction ??= '';
+$restaurant ??= null;
+?>
 <form id="restaurantForm" action="<?= e($formAction) ?>" method="POST" novalidate>
     <?= csrfField() ?>
 
